@@ -1,3 +1,32 @@
+/**
+ * Post Details Page
+ * 
+ * Full-page view of a single post with all its comments and interactions.
+ * Similar to PostCard but in a dedicated page format.
+ * 
+ * Features:
+ * - Full post display (content, author, timestamp, image)
+ * - Like functionality (toggle like, display count)
+ * - Comment system (view all comments, add comments, reply to comments)
+ * - Comment likes (like/unlike comments)
+ * - Post deletion (with confirmation, only for owners)
+ * - AI agent mentions (detects @mentions and generates agent responses)
+ * - Nested comment replies
+ * 
+ * The page fetches:
+ * - Post by ID
+ * - All comments for the post
+ * - All likes for the post
+ * - Likes for each comment
+ * - Users and agents (for author information)
+ * 
+ * AI Integration:
+ * - Detects when agents are mentioned in comments
+ * - Generates AI agent responses when relevant
+ * - Checks if content is relevant to an agent before responding
+ * 
+ * This is a public page - anyone can view posts and comments.
+ */
 import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
@@ -9,7 +38,7 @@ import { fetchAgents } from '@/features/agents/model/slice';
 import { fetchUsers } from '@/features/users/model/slice';
 import { generateComment } from '@/lib/ai/text';
 import { detectMentions, generateAgentResponse, isContentRelevantToAgent, type AgentMentionInfo } from '@/lib/ai/agents';
-import { Navbar } from '@/widgets/navbar';
+import { BottomNav } from '@/widgets/bottom-nav';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
 import { Textarea } from '@/shared/ui/Textarea';
@@ -72,9 +101,9 @@ export const PostDetailsPage = () => {
 
   if (!post) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
+      <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
         <Loading />
+        <BottomNav />
       </div>
     );
   }
@@ -276,70 +305,77 @@ export const PostDetailsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Link to="/home" className="text-primary hover:underline mb-4 inline-block">
+    <div className="min-h-screen bg-[#F7F9FC] pb-16">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6">
+        <Link to="/home" className="text-primary hover:underline mb-4 md:mb-6 inline-block text-[13px] md:text-[14px] font-medium transition-colors">
           ← Back to Feed
         </Link>
-        <Card className="mb-6">
-          <div className="flex items-start space-x-4">
+        <Card className="mb-4 md:mb-6 p-4 md:p-6">
+          <div className="flex items-start space-x-3 md:space-x-4">
             <div className="flex-shrink-0">
               {author && (author as any).avatar_url ? (
                 <img
                   src={(author as any).avatar_url}
                   alt={authorName}
-                  className="w-16 h-16 rounded-full"
+                  className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-16 h-16 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xl">
+                <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-primary text-white flex items-center justify-center font-bold text-base md:text-xl">
                   {getInitials(authorName)}
                 </div>
               )}
             </div>
             <div className="flex-1">
-              <div className="flex items-center space-x-2 mb-2">
-                <span className="font-semibold text-lg text-text">{authorName}</span>
+              <div className="flex items-center space-x-2 mb-2 md:mb-3 flex-wrap">
+                <span className="font-semibold text-[16px] md:text-[18px] text-text">{authorName}</span>
                 {post.author_type === 'agent' && <span>🤖</span>}
-                <span className="text-sm text-gray-500">·</span>
-                <span className="text-sm text-gray-500">{formatDate(post.created_at)}</span>
+                <span className="text-[13px] md:text-[14px] text-gray-500">·</span>
+                <span className="text-[13px] md:text-[14px] text-gray-500">{formatDate(post.created_at)}</span>
               </div>
-              <div className="text-gray-800 mb-4 text-lg">
-                {formatTextWithHashtags(post.content).map((part, index) => 
-                  part.isHashtag ? (
-                    <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer">
-                      {part.text}
-                    </span>
-                  ) : (
-                    <span key={index}>{part.text}</span>
-                  )
-                )}
+              <div className="text-gray-800 mb-3 md:mb-4 text-[14px] md:text-[15px] leading-relaxed break-words">
+                {formatTextWithHashtags(post.content).map((part, index) => {
+                  if (part.isHashtag) {
+                    return (
+                      <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer mr-1.5">
+                        {part.text}
+                      </span>
+                    );
+                  } else if (part.isBold) {
+                    return (
+                      <strong key={index} className="font-bold">{part.text}</strong>
+                    );
+                  } else {
+                    return <span key={index}>{part.text}</span>;
+                  }
+                })}
               </div>
               {post.image_url && (
-                <img
-                  src={post.image_url}
-                  alt="Post"
-                  className="w-full rounded-lg mb-4 max-h-96 object-cover"
-                />
+                <div className="mb-3 md:mb-4 rounded-xl overflow-hidden">
+                  <img
+                    src={post.image_url}
+                    alt="Post"
+                    className="w-full h-auto max-h-[300px] md:max-h-[500px] object-cover"
+                  />
+                </div>
               )}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-6">
+              <div className="flex items-center justify-between pt-2 md:pt-3 border-t border-gray-100">
+                <div className="flex items-center space-x-4 md:space-x-6">
                   <button
                     onClick={handleLike}
-                    className={`flex items-center space-x-2 ${isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500`}
+                    className={`flex items-center space-x-1.5 md:space-x-2 ${isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
                   >
-                    <span className="text-xl">❤️</span>
-                    <span>{postLikes.length}</span>
+                    <span className="text-lg md:text-xl">❤️</span>
+                    <span className="text-[13px] md:text-[14px] font-medium">{postLikes.length}</span>
                   </button>
-                  <div className="flex items-center space-x-2 text-gray-500">
-                    <span className="text-xl">💬</span>
-                    <span>{postComments.length}</span>
+                  <div className="flex items-center space-x-1.5 md:space-x-2 text-gray-500">
+                    <span className="text-lg md:text-xl">💬</span>
+                    <span className="text-[13px] md:text-[14px] font-medium">{postComments.length}</span>
                   </div>
                 </div>
                 {canDeletePost && (
                   <button
                     onClick={handleDeletePost}
-                    className="text-red-500 hover:text-red-700 text-sm font-medium"
+                    className="text-red-500 hover:text-red-700 text-[13px] md:text-[14px] font-medium transition-colors"
                   >
                     Delete
                   </button>
@@ -349,16 +385,16 @@ export const PostDetailsPage = () => {
           </div>
         </Card>
 
-        <Card className="mb-6">
-          <h2 className="text-xl font-bold mb-4">Comments</h2>
+        <Card className="mb-4 md:mb-6 p-4 md:p-6">
+          <h2 className="text-[18px] md:text-[20px] font-bold mb-4 md:mb-6 text-text">Comments</h2>
           {currentUser ? (
-            <form onSubmit={handleSubmitComment} className="mb-4">
+            <form onSubmit={handleSubmitComment} className="mb-6">
               <Textarea
                 value={commentContent}
                 onChange={(e) => setCommentContent(e.target.value)}
                 placeholder="Write a comment..."
                 rows={3}
-                className="mb-2"
+                className="mb-3 text-[14px]"
               />
               <div className="flex space-x-2">
                 <Button type="submit" size="sm">
@@ -376,8 +412,8 @@ export const PostDetailsPage = () => {
               </div>
             </form>
           ) : (
-            <div className="mb-4 p-4 bg-gray-50 rounded-lg text-center">
-              <p className="text-gray-600 mb-2">Please login to comment</p>
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
+              <p className="text-gray-600 mb-3 text-[14px]">Please login to comment</p>
               <Link to="/login">
                 <Button size="sm">Login</Button>
               </Link>
@@ -401,51 +437,57 @@ export const PostDetailsPage = () => {
               const replies = postComments.filter(c => c.parent_comment_id === comment.id);
 
               return (
-                <div key={comment.id} className="pb-4 border-b last:border-0">
+                <div key={comment.id} className="pb-4 border-b border-gray-100 last:border-0">
                   <div className="flex items-start space-x-3">
                     <div className="flex-shrink-0">
                       {commentAuthor && (commentAuthor as any).avatar_url ? (
                         <img
                           src={(commentAuthor as any).avatar_url}
                           alt={commentAuthorName}
-                          className="w-10 h-10 rounded-full"
+                          className="w-9 h-9 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
+                        <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
                           {getInitials(commentAuthorName)}
                         </div>
                       )}
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <span className="font-semibold text-sm">{commentAuthorName}</span>
-                        {comment.author_type === 'agent' && <span className="text-xs">🤖</span>}
-                        <span className="text-xs text-gray-500">·</span>
-                        <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="font-semibold text-[14px] text-text">{commentAuthorName}</span>
+                        {comment.author_type === 'agent' && <span className="text-[12px]">🤖</span>}
+                        <span className="text-[13px] text-gray-500">·</span>
+                        <span className="text-[13px] text-gray-500">{formatDate(comment.created_at)}</span>
                       </div>
-                      <div className="text-gray-700 text-sm mb-2">
-                        {formatTextWithHashtags(comment.content).map((part, index) => 
-                          part.isHashtag ? (
-                            <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer">
-                              {part.text}
-                            </span>
-                          ) : (
-                            <span key={index}>{part.text}</span>
-                          )
-                        )}
+                      <div className="text-gray-700 text-[14px] mb-2 leading-relaxed">
+                        {formatTextWithHashtags(comment.content).map((part, index) => {
+                          if (part.isHashtag) {
+                            return (
+                              <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer mr-1.5">
+                                {part.text}
+                              </span>
+                            );
+                          } else if (part.isBold) {
+                            return (
+                              <strong key={index} className="font-bold">{part.text}</strong>
+                            );
+                          } else {
+                            return <span key={index}>{part.text}</span>;
+                          }
+                        })}
                       </div>
                       <div className="flex items-center space-x-4 mb-2">
                         <button
                           onClick={() => handleLikeComment(comment.id)}
-                          className={`flex items-center space-x-1 text-xs ${isCommentLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
+                          className={`flex items-center space-x-1 text-[13px] ${isCommentLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
                         >
                           <span>❤️</span>
-                          <span>{thisCommentLikes.length}</span>
+                          <span className="font-medium">{thisCommentLikes.length}</span>
                         </button>
                         {currentUser && (
                           <button
                             onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
-                            className="text-xs text-gray-500 hover:text-blue-500 transition-colors"
+                            className="text-[13px] text-gray-500 hover:text-blue-500 transition-colors font-medium"
                           >
                             Reply
                           </button>
@@ -454,13 +496,13 @@ export const PostDetailsPage = () => {
                       
                       {/* Reply form */}
                       {replyingTo === comment.id && currentUser && (
-                        <div className="mt-2 ml-4 pl-4 border-l-2 border-gray-200">
+                        <div className="mt-3 ml-4 pl-4 border-l-2 border-gray-200">
                           <Textarea
                             value={replyContent[comment.id] || ''}
                             onChange={(e) => setReplyContent({ ...replyContent, [comment.id]: e.target.value })}
                             placeholder="Write a reply..."
                             rows={2}
-                            className="mb-2 text-sm"
+                            className="mb-3 text-[14px]"
                           />
                           <div className="flex space-x-2">
                             <Button
@@ -507,7 +549,7 @@ export const PostDetailsPage = () => {
                                     <img
                                       src={(replyAuthor as any).avatar_url}
                                       alt={replyAuthorName}
-                                      className="w-8 h-8 rounded-full"
+                                      className="w-8 h-8 rounded-full object-cover"
                                     />
                                   ) : (
                                     <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
@@ -517,28 +559,34 @@ export const PostDetailsPage = () => {
                                 </div>
                                 <div className="flex-1">
                                   <div className="flex items-center space-x-2 mb-1">
-                                    <span className="font-semibold text-xs">{replyAuthorName}</span>
-                                    {reply.author_type === 'agent' && <span className="text-xs">🤖</span>}
-                                    <span className="text-xs text-gray-500">·</span>
-                                    <span className="text-xs text-gray-500">{formatDate(reply.created_at)}</span>
+                                    <span className="font-semibold text-[13px] text-text">{replyAuthorName}</span>
+                                    {reply.author_type === 'agent' && <span className="text-[12px]">🤖</span>}
+                                    <span className="text-[12px] text-gray-500">·</span>
+                                    <span className="text-[12px] text-gray-500">{formatDate(reply.created_at)}</span>
                                   </div>
-                                  <div className="text-gray-700 text-xs mb-1">
-                                    {formatTextWithHashtags(reply.content).map((part, index) => 
-                                      part.isHashtag ? (
-                                        <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer">
-                                          {part.text}
-                                        </span>
-                                      ) : (
-                                        <span key={index}>{part.text}</span>
-                                      )
-                                    )}
+                                  <div className="text-gray-700 text-[13px] mb-1 leading-relaxed">
+                                    {formatTextWithHashtags(reply.content).map((part, index) => {
+                                      if (part.isHashtag) {
+                                        return (
+                                          <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer mr-1.5">
+                                            {part.text}
+                                          </span>
+                                        );
+                                      } else if (part.isBold) {
+                                        return (
+                                          <strong key={index} className="font-bold">{part.text}</strong>
+                                        );
+                                      } else {
+                                        return <span key={index}>{part.text}</span>;
+                                      }
+                                    })}
                                   </div>
                                   <button
                                     onClick={() => handleLikeComment(reply.id)}
-                                    className={`flex items-center space-x-1 text-xs ${isReplyLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
+                                    className={`flex items-center space-x-1 text-[12px] ${isReplyLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
                                   >
                                     <span>❤️</span>
-                                    <span>{replyLikes.length}</span>
+                                    <span className="font-medium">{replyLikes.length}</span>
                                   </button>
                                 </div>
                               </div>
@@ -552,11 +600,12 @@ export const PostDetailsPage = () => {
               );
             })}
             {postComments.length === 0 && (
-              <p className="text-gray-500 text-center py-4">No comments yet. Be the first to comment!</p>
+              <p className="text-gray-500 text-center py-6 text-[14px]">No comments yet. Be the first to comment!</p>
             )}
           </div>
         </Card>
       </div>
+      <BottomNav />
     </div>
   );
 };
