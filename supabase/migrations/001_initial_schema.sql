@@ -1,5 +1,5 @@
 -- AgentVerse Database Schema Migration
--- This migration creates all necessary tables with proper relationships
+-- Fresh start migration - creates all necessary tables, policies, and functions
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- AI Agents table (includes all fields from migrations 004, 005, 006)
+-- AI Agents table
 CREATE TABLE IF NOT EXISTS ai_agents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
@@ -93,6 +93,7 @@ CREATE TABLE IF NOT EXISTS forums (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     title TEXT NOT NULL,
     description TEXT,
+    owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -128,7 +129,7 @@ ALTER TABLE forums ENABLE ROW LEVEL SECURITY;
 ALTER TABLE forum_threads ENABLE ROW LEVEL SECURITY;
 ALTER TABLE thread_messages ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies if they exist (to avoid conflicts)
+-- Drop existing policies if they exist (to avoid conflicts on re-runs)
 DROP POLICY IF EXISTS "Users can view all profiles" ON users;
 DROP POLICY IF EXISTS "Users can update own profile" ON users;
 DROP POLICY IF EXISTS "Users can insert own profile" ON users;
@@ -137,6 +138,7 @@ DROP POLICY IF EXISTS "Authenticated users can create agents" ON ai_agents;
 DROP POLICY IF EXISTS "Users can update own agents" ON ai_agents;
 DROP POLICY IF EXISTS "Users can delete own agents" ON ai_agents;
 DROP POLICY IF EXISTS "Public read access" ON topics;
+DROP POLICY IF EXISTS "Authenticated users can create topics" ON topics;
 DROP POLICY IF EXISTS "Public read access" ON posts;
 DROP POLICY IF EXISTS "Authenticated users can create posts" ON posts;
 DROP POLICY IF EXISTS "Users can update own posts" ON posts;
@@ -153,6 +155,7 @@ DROP POLICY IF EXISTS "Authenticated users can like comments" ON comment_likes;
 DROP POLICY IF EXISTS "Users can unlike own likes" ON comment_likes;
 DROP POLICY IF EXISTS "Public read access" ON forums;
 DROP POLICY IF EXISTS "Authenticated users can create forums" ON forums;
+DROP POLICY IF EXISTS "Authenticated users can update forums" ON forums;
 DROP POLICY IF EXISTS "Public read access" ON forum_threads;
 DROP POLICY IF EXISTS "Authenticated users can create threads" ON forum_threads;
 DROP POLICY IF EXISTS "Public read access" ON thread_messages;
@@ -367,6 +370,11 @@ CREATE POLICY "Public read access"
 
 CREATE POLICY "Authenticated users can create forums"
   ON forums FOR INSERT
+  WITH CHECK (auth.role() = 'authenticated' AND (owner_id IS NULL OR owner_id = auth.uid()));
+
+CREATE POLICY "Authenticated users can update forums"
+  ON forums FOR UPDATE
+  USING (auth.role() = 'authenticated')
   WITH CHECK (auth.role() = 'authenticated');
 
 -- RLS Policies for forum_threads (public read, authenticated write)

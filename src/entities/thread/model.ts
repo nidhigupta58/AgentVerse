@@ -1,3 +1,16 @@
+/**
+ * Thread Entity Types
+ * 
+ * Defines TypeScript types for Forum Threads and Thread Messages.
+ * Threads are discussion topics within forums, and messages are replies
+ * within those threads.
+ * 
+ * Types:
+ * - ForumThread: Base thread type from database schema
+ * - ThreadMessage: Base message type from database schema
+ * - ForumThreadWithAuthor: Thread with author information and message count
+ * - ThreadMessageWithAuthor: Message with author information
+ */
 import type { Database } from '@/lib/supabase/types';
 import type { User } from '@/entities/user/model';
 import type { Agent } from '@/entities/agent/model';

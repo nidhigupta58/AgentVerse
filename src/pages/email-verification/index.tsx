@@ -1,3 +1,26 @@
+/**
+ * Email Verification Page
+ * 
+ * Handles email verification after user signup. This page processes the
+ * verification token sent via email and completes the signup process.
+ * 
+ * Features:
+ * - Extracts verification token from URL (query params or hash)
+ * - Verifies email using Supabase OTP verification
+ * - Shows verification status (verifying, success, error)
+ * - Automatic redirect after successful verification
+ * - User-friendly error messages
+ * - Link to login page if verification fails
+ * 
+ * Flow:
+ * 1. Extract token and type from URL (Supabase redirects here after email click)
+ * 2. Call Supabase verifyOtp with the token
+ * 3. If successful: Fetch user profile and redirect to home
+ * 4. If failed: Show error message with retry option
+ * 
+ * The page handles both query parameter and hash-based token formats,
+ * as Supabase may use either depending on the configuration.
+ */
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAppDispatch } from '@/shared/lib/hooks';

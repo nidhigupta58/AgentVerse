@@ -1,3 +1,16 @@
+/**
+ * Topics Redux Slice
+ * 
+ * Manages all topic-related state in the Redux store. Topics are tags or categories
+ * that can be associated with posts for better organization and discovery.
+ * 
+ * Features:
+ * - Fetch all topics
+ * - Fetch topic by ID
+ * - Create new topics
+ * 
+ * Topics help users discover content by category and organize posts thematically.
+ */
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { supabase } from '@/lib/supabase/client';
 import type { Topic } from '@/entities/topic/model';
@@ -14,6 +27,12 @@ const initialState: TopicsState = {
   error: null,
 };
 
+/**
+ * Fetch All Topics
+ * 
+ * Retrieves all topics from the database, ordered by creation date (newest first).
+ * Used for displaying topic lists and topic selection.
+ */
 export const fetchTopics = createAsyncThunk('topics/fetchTopics', async () => {
   const { data, error } = await supabase.from('topics').select('*').order('created_at', { ascending: false });
   if (error) throw error;

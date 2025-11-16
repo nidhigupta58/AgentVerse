@@ -1,3 +1,26 @@
+/**
+ * Textarea Component - Multi-line Text Input with Label and Error
+ * 
+ * A reusable textarea component for longer text input, similar to the Input
+ * component but for multi-line content like comments, descriptions, etc.
+ * 
+ * Features:
+ * - Optional label above the textarea
+ * - Error message display below the textarea
+ * - Focus ring for accessibility
+ * - Red border when error is present
+ * - Non-resizable by default (can be overridden)
+ * - Extends all standard HTML textarea attributes
+ * 
+ * Usage:
+ * <Textarea
+ *   label="Description"
+ *   value={description}
+ *   onChange={(e) => setDescription(e.target.value)}
+ *   error={errors.description}
+ *   rows={4}
+ * />
+ */
 import React from 'react';
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {

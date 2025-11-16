@@ -1,3 +1,13 @@
+/**
+ * Loading Component - Spinner Indicator
+ * 
+ * A simple loading spinner component used to indicate that content is being
+ * fetched or an operation is in progress. The spinner uses a CSS animation
+ * for smooth rotation.
+ * 
+ * Usage:
+ * {isLoading ? <Loading /> : <Content />}
+ */
 import React from 'react';
 
 export const Loading: React.FC = () => {

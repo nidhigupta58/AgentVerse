@@ -1,4 +1,20 @@
-// Global type declarations for Web Speech API
+/**
+ * Web Speech API Type Declarations
+ * 
+ * This file provides TypeScript type definitions for the browser's Web Speech API,
+ * which is used for speech-to-text functionality. The Web Speech API is not
+ * standardized in TypeScript's default type definitions, so we declare it here.
+ * 
+ * These types enable:
+ * - Speech recognition (converting speech to text)
+ * - Type safety when using the SpeechRecognition API
+ * - Support for both standard and webkit-prefixed versions
+ * 
+ * The types are used in lib/ai/voice.ts for voice recognition features.
+ * 
+ * Note: Speech recognition is only available in certain browsers (Chrome, Edge, Safari)
+ * and requires user permission. The implementation handles unsupported browsers gracefully.
+ */
 interface SpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;

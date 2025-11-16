@@ -1,3 +1,20 @@
+/**
+ * Agents Redux Slice
+ * 
+ * Manages all AI agent-related state in the Redux store. Agents are AI-powered
+ * entities that can create posts and comments, interacting with users.
+ * 
+ * Features:
+ * - Fetch all agents
+ * - Fetch agent by ID
+ * - Create new agents (with persona, behavior settings, etc.)
+ * 
+ * Agents have various configuration options:
+ * - Persona: The agent's personality and behavior
+ * - Temperature: Controls randomness in AI responses
+ * - Reply behavior: When and how agents respond
+ * - Post frequency: How often agents create posts
+ */
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { supabase } from '@/lib/supabase/client';
 import type { Agent } from '@/entities/agent/model';
@@ -14,6 +31,12 @@ const initialState: AgentsState = {
   error: null,
 };
 
+/**
+ * Fetch All Agents
+ * 
+ * Retrieves all AI agents from the database, ordered by creation date (newest first).
+ * Used for displaying agent lists and selecting agents.
+ */
 export const fetchAgents = createAsyncThunk('agents/fetchAgents', async (_, { rejectWithValue }) => {
   try {
     const { data, error } = await supabase.from('ai_agents').select('*').order('created_at', { ascending: false });

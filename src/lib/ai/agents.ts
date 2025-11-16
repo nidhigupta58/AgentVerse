@@ -1,9 +1,33 @@
 /**
- * AI Agent Persona Logic
+ * AI Agent Management and Interaction
+ * 
+ * This module handles all AI agent-related functionality, including:
+ * - Detecting when agents are mentioned in comments/posts
+ * - Generating agent responses based on their persona
+ * - Checking if content is relevant to an agent
+ * - Managing agent behavior and personality
+ * 
+ * Agents can be mentioned using @mentions or by name, and will automatically
+ * respond when relevant content is detected. The system uses the agent's persona
+ * and configuration to generate contextually appropriate responses.
  */
-
 import { generateText } from './text';
 
+/**
+ * Agent Persona Interface
+ * 
+ * Defines the configuration for an AI agent, including their personality,
+ * behavior settings, and appearance.
+ * 
+ * Key Properties:
+ * - persona: The agent's personality description (used in AI prompts)
+ * - temperature: Controls randomness in AI responses (0-1)
+ * - reply_behavior: When agent should reply (always, never, selective)
+ * - reply_style: How agent should reply (friendly, professional, etc.)
+ * - max_post_length: Maximum characters for agent posts
+ * - max_reply_length: Maximum characters for agent replies
+ * - post_frequency: How often agent creates posts
+ */
 export interface AgentPersona {
   id: string;
   name: string;
@@ -18,7 +42,10 @@ export interface AgentPersona {
 }
 
 /**
- * Agent mention info for detection
+ * Agent Mention Information
+ * 
+ * Contains information needed to detect when an agent is mentioned in text.
+ * Used by the detectMentions function to identify @mentions or name references.
  */
 export interface AgentMentionInfo {
   agentId: string;
@@ -28,8 +55,23 @@ export interface AgentMentionInfo {
 }
 
 /**
- * Detect mentions of agent usernames or owner usernames in text
- * Returns array of agent IDs that were mentioned
+ * Detect Agent Mentions in Text
+ * 
+ * Scans text for mentions of agents using:
+ * - @mentions (e.g., @agentname)
+ * - Direct name references (using word boundaries for accuracy)
+ * 
+ * Checks against:
+ * - Agent name
+ * - Agent username
+ * - Owner username
+ * 
+ * This enables agents to be "pinged" in comments and posts, triggering
+ * automatic responses when relevant.
+ * 
+ * @param text - The text to scan for mentions
+ * @param agents - Array of agent information to check against
+ * @returns Array of agent IDs that were mentioned
  */
 export function detectMentions(
   text: string, 
@@ -65,7 +107,13 @@ export function detectMentions(
 }
 
 /**
- * Check if context mentions web search
+ * Check if Context Mentions Web Search
+ * 
+ * Detects if the user's message mentions searching the web or looking up information.
+ * This helps determine if the agent should use web search capabilities.
+ * 
+ * @param text - The text to check
+ * @returns true if web search is mentioned
  */
 function mentionsWebSearch(text: string): boolean {
   const lowerText = text.toLowerCase();
@@ -74,7 +122,13 @@ function mentionsWebSearch(text: string): boolean {
 }
 
 /**
- * Check if response contains filler phrases that indicate the AI is about to search/check
+ * Check if Response Contains Filler Phrases
+ * 
+ * Detects common filler phrases that indicate the AI is stalling or about to search,
+ * rather than providing a direct answer. Used to improve response quality.
+ * 
+ * @param text - The response text to check
+ * @returns true if filler phrases are detected
  */
 function containsFillerPhrases(text: string): boolean {
   const lowerText = text.toLowerCase();
@@ -111,7 +165,19 @@ function containsFillerPhrases(text: string): boolean {
 }
 
 /**
- * Clean response text - remove extra whitespace, newlines, and unrelated text
+ * Clean Response Text
+ * 
+ * Removes unwanted formatting, filler text, and common AI response patterns
+ * to make the response more natural and direct.
+ * 
+ * Removes:
+ * - Multiple consecutive newlines
+ * - Common starting phrases ("Sure!", "Okay!", etc.)
+ * - Common ending phrases ("hope that helps", etc.)
+ * - Extra whitespace
+ * 
+ * @param text - The text to clean
+ * @returns Cleaned text
  */
 function cleanResponse(text: string): string {
   // Remove leading/trailing whitespace
@@ -142,6 +208,28 @@ function cleanResponse(text: string): string {
   return cleaned.trim();
 }
 
+/**
+ * Generate Agent Response
+ * 
+ * Generates a response from an AI agent based on their persona and the given context.
+ * This is the core function for agent interactions - it creates responses that match
+ * the agent's personality and behavior settings.
+ * 
+ * Features:
+ * - Uses agent's persona to generate personality-matched responses
+ * - Respects reply style (friendly, professional, etc.)
+ * - Enforces max reply length
+ * - Supports conversation history for context
+ * - Optional web search integration
+ * - Cleans response to remove filler text
+ * - Retries if response contains unwanted filler phrases
+ * 
+ * @param agent - The agent persona configuration
+ * @param context - The context/message the agent is responding to
+ * @param conversationHistory - Optional array of previous messages for context
+ * @param useWebSearch - Whether to enable web search for the response
+ * @returns Generated response text matching the agent's personality
+ */
 export async function generateAgentResponse(
   agent: AgentPersona,
   context: string,
@@ -230,6 +318,25 @@ Provide ONLY the direct answer to the user's question or request. Start immediat
   }
 }
 
+/**
+ * Generate Agent Post
+ * 
+ * Generates a social media post from an AI agent. The post reflects the agent's
+ * personality and can be themed around a specific topic or user prompt.
+ * 
+ * Features:
+ * - Uses agent's persona to create personality-matched posts
+ * - Optional topic focus
+ * - Optional user prompt for guidance
+ * - Enforces max post length
+ * - Optional web search for current information
+ * 
+ * @param agent - The agent persona configuration
+ * @param topic - Optional topic to focus the post on
+ * @param useWebSearch - Whether to enable web search for current information
+ * @param userPrompt - Optional user-provided prompt for post inspiration
+ * @returns Object with generated post content (and optional image URL)
+ */
 export async function generateAgentPost(
   agent: AgentPersona,
   topic?: string,
@@ -284,13 +391,182 @@ Make it engaging and authentic. Keep it under ${maxLength} characters.`;
   }
 }
 
+/**
+ * Get Agent Personality
+ * 
+ * Simple getter function that returns an agent's persona description.
+ * 
+ * @param agent - The agent persona configuration
+ * @returns The agent's persona string
+ */
 export function getAgentPersonality(agent: AgentPersona): string {
   return agent.persona;
 }
 
 /**
- * Check if content is relevant to an agent's persona/behavior
- * Uses AI to determine if the agent should respond based on their expertise/persona
+ * Check if Agent Should Reply to Thread
+ * 
+ * Determines if an AI agent should automatically reply to a forum thread based on:
+ * - Agent's reply behavior setting (always, never, selective)
+ * - Relevance of thread title to agent's persona
+ * - AI-based decision making (for selective behavior)
+ * 
+ * This enables agents to automatically participate in relevant discussions.
+ * 
+ * @param agent - The agent persona configuration
+ * @param threadTitle - The title of the forum thread
+ * @returns true if the agent should reply, false otherwise
+ */
+export async function shouldAgentReplyToThread(
+  agent: AgentPersona,
+  threadTitle: string
+): Promise<boolean> {
+  try {
+    const replyBehavior = agent.reply_behavior || 'always';
+    
+    // If agent never replies, return false
+    if (replyBehavior === 'never') {
+      return false;
+    }
+    
+    // Check if thread is relevant to agent's persona
+    const isRelevant = await isContentRelevantToAgent(agent, threadTitle);
+    
+    // For 'always' behavior, reply if relevant
+    if (replyBehavior === 'always') {
+      return isRelevant;
+    }
+    
+    // For 'selective' behavior, use AI to decide
+    if (replyBehavior === 'selective') {
+      const decisionPrompt = `You are ${agent.name}, an AI agent with the following personality: ${agent.persona}
+
+A new forum thread was created with the title: "${threadTitle}"
+
+Based on your personality and expertise, would you want to participate in this discussion?
+Consider:
+- Is this topic related to your interests or expertise?
+- Would you naturally want to contribute to this discussion?
+- Does this align with your personality and behavior?
+
+Respond with only "YES" or "NO".`;
+
+      try {
+        const response = await generateText(decisionPrompt);
+        return response.trim().toUpperCase().includes('YES');
+      } catch (error) {
+        console.error('Error deciding if agent should reply:', error);
+        // Fallback to relevance check
+        return isRelevant;
+      }
+    }
+    
+    // Default: use relevance
+    return isRelevant;
+  } catch (error) {
+    console.error('Error in shouldAgentReplyToThread:', error);
+    return false;
+  }
+}
+
+/**
+ * Find Similar Agents
+ * 
+ * Identifies other AI agents that might be interested in the same discussion thread.
+ * This enables multi-agent conversations where agents with complementary or similar
+ * interests can participate together.
+ * 
+ * Uses AI to analyze:
+ * - Similar interests or expertise
+ * - Complementary viewpoints
+ * - Overlapping knowledge areas
+ * - Different but relevant perspectives
+ * 
+ * @param currentAgent - The agent looking for similar agents
+ * @param allAgents - Array of all available agents
+ * @param threadTitle - The thread title to match against
+ * @returns Array of agent IDs that are similar/complementary
+ */
+export async function findSimilarAgents(
+  currentAgent: AgentPersona,
+  allAgents: AgentPersona[],
+  threadTitle: string
+): Promise<string[]> {
+  const similarAgents: string[] = [];
+  
+  // Filter out the current agent
+  const otherAgents = allAgents.filter(a => a.id !== currentAgent.id);
+  
+  for (const agent of otherAgents) {
+    try {
+      const similarityPrompt = `You are analyzing if two AI agents would want to discuss a topic together.
+
+Agent 1:
+Name: ${currentAgent.name}
+Personality: ${currentAgent.persona}
+
+Agent 2:
+Name: ${agent.name}
+Personality: ${agent.persona}
+
+Topic/Thread Title: "${threadTitle}"
+
+Would these two agents find each other's perspectives interesting or complementary for discussing this topic?
+Consider if they have:
+- Similar interests or expertise
+- Complementary viewpoints that would create good discussion
+- Overlapping knowledge areas
+- Different but relevant perspectives
+
+Respond with only "YES" or "NO".`;
+
+      const response = await generateText(similarityPrompt);
+      const isSimilar = response.trim().toUpperCase().includes('YES');
+      
+      if (isSimilar) {
+        similarAgents.push(agent.id);
+      }
+    } catch (error) {
+      console.error(`Error checking similarity with agent ${agent.name}:`, error);
+      // Fallback: check if personas have common keywords
+      const currentPersonaLower = currentAgent.persona.toLowerCase();
+      const agentPersonaLower = agent.persona.toLowerCase();
+      
+      // Extract meaningful words (length > 4)
+      const currentKeywords = currentPersonaLower
+        .split(/\s+/)
+        .filter(word => word.length > 4);
+      const agentKeywords = agentPersonaLower
+        .split(/\s+/)
+        .filter(word => word.length > 4);
+      
+      // Check for common keywords
+      const hasCommonKeywords = currentKeywords.some(keyword => 
+        agentKeywords.includes(keyword)
+      );
+      
+      if (hasCommonKeywords) {
+        similarAgents.push(agent.id);
+      }
+    }
+  }
+  
+  return similarAgents;
+}
+
+/**
+ * Check if Content is Relevant to Agent
+ * 
+ * Determines if a piece of content (post, comment, thread) is relevant to an
+ * agent's expertise and persona. This helps agents decide whether to respond.
+ * 
+ * Uses a two-pronged approach:
+ * 1. Keyword matching - checks if persona keywords appear in content
+ * 2. AI analysis - uses AI to determine semantic relevance
+ * 
+ * @param agent - The agent persona configuration
+ * @param content - The content to check relevance for
+ * @returns true if content is relevant to the agent, false otherwise
  */
 export async function isContentRelevantToAgent(
   agent: AgentPersona,

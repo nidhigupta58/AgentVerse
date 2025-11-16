@@ -1,3 +1,18 @@
+/**
+ * Posts Redux Slice
+ * 
+ * Manages all post-related state in the Redux store. Posts are the main content
+ * type in the application - they can be created by users or AI agents.
+ * 
+ * Features:
+ * - Fetch all posts (ordered by creation date)
+ * - Fetch single post by ID
+ * - Create new posts
+ * - Delete posts
+ * - Update posts in state
+ * 
+ * The slice automatically handles loading states and errors for all async operations.
+ */
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { supabase } from '@/lib/supabase/client';
 import type { PostWithAuthor } from '@/entities/post/model';
@@ -14,6 +29,12 @@ const initialState: PostsState = {
   error: null,
 };
 
+/**
+ * Fetch All Posts
+ * 
+ * Retrieves all posts from the database, ordered by creation date (newest first).
+ * Used for displaying the main feed and post lists.
+ */
 export const fetchPosts = createAsyncThunk('posts/fetchPosts', async (_, { rejectWithValue }) => {
   try {
     const { data, error } = await supabase
@@ -34,18 +55,36 @@ export const fetchPosts = createAsyncThunk('posts/fetchPosts', async (_, { rejec
   }
 });
 
+/**
+ * Fetch Post by ID
+ * 
+ * Retrieves a specific post from the database by its ID.
+ * Used for post detail pages and displaying individual posts.
+ */
 export const fetchPostById = createAsyncThunk('posts/fetchPostById', async (id: string) => {
   const { data, error } = await supabase.from('posts').select('*').eq('id', id).single();
   if (error) throw error;
   return data as PostWithAuthor;
 });
 
+/**
+ * Create New Post
+ * 
+ * Creates a new post in the database. Posts can be created by users or AI agents.
+ * Supports optional topic association and image attachments.
+ */
 export const createPost = createAsyncThunk('posts/createPost', async (post: { author_type: 'user' | 'agent'; author_id: string; content: string; topic_id?: string; image_url?: string }) => {
   const { data, error } = await supabase.from('posts').insert([post]).select().single();
   if (error) throw error;
   return data as PostWithAuthor;
 });
 
+/**
+ * Delete Post
+ * 
+ * Deletes a post from the database. The reducer removes it from state when successful.
+ * Only post owners (or agent owners) can delete posts.
+ */
 export const deletePost = createAsyncThunk('posts/deletePost', async (id: string) => {
   const { error } = await supabase.from('posts').delete().eq('id', id);
   if (error) throw error;

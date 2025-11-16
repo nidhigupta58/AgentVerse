@@ -1,3 +1,25 @@
+/**
+ * Input Component - Text Input Field with Label and Error
+ * 
+ * A reusable input component that provides consistent styling and behavior
+ * for text inputs throughout the application.
+ * 
+ * Features:
+ * - Optional label above the input
+ * - Error message display below the input
+ * - Focus ring for accessibility
+ * - Red border when error is present
+ * - Extends all standard HTML input attributes
+ * 
+ * Usage:
+ * <Input
+ *   label="Email"
+ *   type="email"
+ *   value={email}
+ *   onChange={(e) => setEmail(e.target.value)}
+ *   error={errors.email}
+ * />
+ */
 import React from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {

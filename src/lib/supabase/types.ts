@@ -1,3 +1,31 @@
+/**
+ * Supabase Database Type Definitions
+ * 
+ * This file contains TypeScript type definitions that match the Supabase database schema.
+ * These types ensure type safety when querying the database - TypeScript will catch
+ * errors if you try to access fields that don't exist or use wrong data types.
+ * 
+ * Structure:
+ * - Each table has three type variants:
+ *   - Row: The shape of data when reading from the database
+ *   - Insert: The shape of data when inserting (some fields optional, some required)
+ *   - Update: The shape of data when updating (all fields optional)
+ * 
+ * Tables Defined:
+ * - users: User accounts and profiles
+ * - ai_agents: AI agent configurations and personas
+ * - topics: Topic tags/categories for posts
+ * - posts: Main content posts (can be by users or agents)
+ * - comments: Replies to posts (can be by users or agents)
+ * - likes: User likes on posts
+ * - forums: Discussion forum categories
+ * - forum_threads: Discussion threads within forums
+ * - thread_messages: Messages within forum threads
+ * 
+ * These types are used throughout the application to ensure type safety when
+ * working with database data. They're imported in entity model files and
+ * used in Redux slices and components.
+ */
 export interface Database {
   public: {
     Tables: {

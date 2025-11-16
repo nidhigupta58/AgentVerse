@@ -1,14 +1,26 @@
+/**
+ * Authentication Functions
+ * 
+ * This module contains all the authentication-related functions for signing up,
+ * signing in, signing out, and managing user sessions. All functions interact
+ * with Supabase Auth, which handles the heavy lifting of authentication.
+ * 
+ * Important Notes:
+ * - Supabase automatically refreshes tokens in the background
+ * - Sessions are persisted in localStorage under 'supabase.auth.token'
+ * - The client is configured with autoRefreshToken: true
+ */
 import { supabase } from './client';
 import type { User } from '@/entities/user/model';
-
-// Supabase automatically handles token refresh in the background
-// The client is configured with autoRefreshToken: true, so manual refresh is not needed
-// Session is persisted in localStorage under the key 'supabase.auth.token' and automatically restored on page load
-// Long-lived refresh tokens are used to maintain session continuity
+import type { Session } from '@supabase/supabase-js';
 
 /**
- * Get the stored token from localStorage
- * This is the key where Supabase stores the session token: 'supabase.auth.token'
+ * Get Stored Access Token
+ * 
+ * Retrieves the access token from localStorage. This token is used to authenticate
+ * API requests. The token is stored by Supabase automatically when a user signs in.
+ * 
+ * Returns the access token string, or null if not found.
  */
 export function getStoredToken(): string | null {
   if (typeof window === 'undefined' || !window.localStorage) {
@@ -19,7 +31,6 @@ export function getStoredToken(): string | null {
     const tokenData = localStorage.getItem('supabase.auth.token');
     if (tokenData) {
       const parsed = JSON.parse(tokenData);
-      // Return the access token if available
       return parsed?.access_token || tokenData;
     }
     return null;
@@ -30,7 +41,12 @@ export function getStoredToken(): string | null {
 }
 
 /**
- * Get the full session data from localStorage
+ * Get Full Session Data
+ * 
+ * Retrieves the complete session object from localStorage, which includes
+ * the access token, refresh token, user info, and expiration times.
+ * 
+ * Returns the full session object, or null if not found.
  */
 export function getStoredSession(): any {
   if (typeof window === 'undefined' || !window.localStorage) {
@@ -57,11 +73,9 @@ export interface SignupData {
 }
 
 export interface LoginData {
-  identifier: string; // username or email
+  identifier: string;
   password: string;
 }
-
-import type { Session } from '@supabase/supabase-js';
 
 export interface AuthResponse {
   user: User | null;
@@ -70,11 +84,24 @@ export interface AuthResponse {
 }
 
 /**
- * Sign up a new user with Supabase Auth
- * Follows Supabase best practices for React apps
+ * Sign Up New User
+ * 
+ * Creates a new user account in Supabase Auth and attempts to create their profile
+ * in the database. This function handles the complete signup flow:
+ * 
+ * 1. Validates input (email, password, username, name)
+ * 2. Creates auth account with Supabase
+ * 3. Creates user profile in database (using RPC function)
+ * 4. Handles email verification requirements
+ * 
+ * If email verification is required, the user profile will be created by a database
+ * trigger when they verify their email. The function tries multiple approaches to
+ * ensure the profile is created.
+ * 
+ * Returns: User object, session, and whether email verification is needed
  */
 export async function signUp({ name, username, email, password }: SignupData): Promise<AuthResponse> {
-  // Validate input
+  // Input validation
   if (!email || !password || !username || !name) {
     throw new Error('All fields are required');
   }
@@ -83,7 +110,7 @@ export async function signUp({ name, username, email, password }: SignupData): P
     throw new Error('Password must be at least 6 characters');
   }
 
-  // Sign up with Supabase Auth
+  // Create auth account with Supabase
   const { data: authData, error: authError } = await supabase.auth.signUp({
     email,
     password,
@@ -104,15 +131,13 @@ export async function signUp({ name, username, email, password }: SignupData): P
     throw new Error('Failed to create user account');
   }
 
-  // Check if email verification is required
+  // Determine if email verification is required
+  // If no session is returned, user needs to verify email first
   const requiresEmailVerification = !authData.session;
 
-  // Always try to create profile, regardless of session status
-  // The function uses SECURITY DEFINER so it can create even without session
-  // It's also granted to 'anon' role, so it should work
+  // Attempt to create user profile in database
+  // Uses RPC function which has SECURITY DEFINER, so it can create even without session
   try {
-    // Use the database function to create the profile (bypasses RLS)
-    // This works even without a session because the function has SECURITY DEFINER
     const { data: userData, error: functionError } = await supabase.rpc('create_user_profile', {
       p_user_id: authData.user.id,
       p_email: email,
@@ -121,7 +146,6 @@ export async function signUp({ name, username, email, password }: SignupData): P
     });
 
     if (!functionError && userData && userData.length > 0) {
-      // Profile created successfully
       return {
         user: userData[0] as User,
         session: authData.session,
@@ -129,13 +153,13 @@ export async function signUp({ name, username, email, password }: SignupData): P
       };
     }
 
-    // If function failed, wait a bit and try to fetch (trigger might have created it)
+    // If RPC function failed, wait a moment - database trigger might create it
     if (functionError) {
       console.warn('Profile creation function failed, waiting for trigger:', functionError.message);
       await new Promise(resolve => setTimeout(resolve, 1500));
     }
 
-    // Try to fetch the profile (might have been created by trigger)
+    // Try fetching the profile (might have been created by trigger)
     const { data: fetchedUser, error: fetchError } = await supabase
       .from('users')
       .select('*')
@@ -150,17 +174,13 @@ export async function signUp({ name, username, email, password }: SignupData): P
       };
     }
 
-    // If still no profile, log warning but don't fail
-    // The trigger should create it when email is verified
+    // Profile not created yet - will be created by trigger when email is verified
     console.warn('Profile not created yet. It will be created by trigger when email is verified.');
   } catch (error: unknown) {
     console.error('Error creating user profile:', error);
-    // Don't throw - user is created, profile will be created by trigger
   }
 
-  // Return response
-  // If email verification required, profile will be created by trigger after verification
-  // If no verification required but profile not created, trigger will handle it
+  // Return without user - profile will be created after email verification
   return {
     user: null,
     session: authData.session,
@@ -169,20 +189,32 @@ export async function signUp({ name, username, email, password }: SignupData): P
 }
 
 /**
- * Sign in with email or username and password
- * Follows Supabase best practices
+ * Sign In User
+ * 
+ * Authenticates a user with either their email or username and password.
+ * This function supports flexible login - users can use either identifier.
+ * 
+ * Flow:
+ * 1. Determines if identifier is email or username (checks for @ symbol)
+ * 2. If username, looks up the email from database
+ * 3. Authenticates with Supabase using email and password
+ * 4. Fetches user profile from database
+ * 5. Returns user and session
+ * 
+ * If the profile doesn't exist (edge case), it attempts to create it using
+ * metadata from the auth account.
  */
 export async function signIn({ identifier, password }: LoginData): Promise<AuthResponse> {
   if (!identifier || !password) {
     throw new Error('Email/username and password are required');
   }
 
-  // Determine if identifier is email or username
+  // Support both email and username login
   let email = identifier;
   const isEmail = identifier.includes('@');
 
   if (!isEmail) {
-    // It's a username, find the user by username
+    // It's a username - look up the email from database
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('email')
@@ -196,14 +228,14 @@ export async function signIn({ identifier, password }: LoginData): Promise<AuthR
     email = userData.email;
   }
 
-  // Sign in with Supabase Auth
+  // Authenticate with Supabase Auth
   const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
   if (authError) {
-    // Provide user-friendly error messages
+    // Convert technical errors to user-friendly messages
     if (authError.message.includes('Invalid login credentials')) {
       throw new Error('Invalid email/username or password');
     }
@@ -221,7 +253,7 @@ export async function signIn({ identifier, password }: LoginData): Promise<AuthR
     throw new Error('Session not created. Please verify your email address.');
   }
 
-  // Fetch user profile
+  // Fetch user profile from database
   const { data: userData, error: userError } = await supabase
     .from('users')
     .select('*')
@@ -229,7 +261,7 @@ export async function signIn({ identifier, password }: LoginData): Promise<AuthR
     .single();
 
   if (userError || !userData) {
-    // If profile doesn't exist, try to create it
+    // Edge case: Profile doesn't exist, try to create it from auth metadata
     try {
       const { data: createdUser } = await supabase.rpc('create_user_profile', {
         p_user_id: authData.user.id,
@@ -258,23 +290,30 @@ export async function signIn({ identifier, password }: LoginData): Promise<AuthR
 }
 
 /**
- * Sign out current user
- * Properly clears the token from localStorage
+ * Sign Out Current User
+ * 
+ * Logs out the current user by:
+ * 1. Calling Supabase signOut to invalidate the session on the server
+ * 2. Clearing all authentication tokens from localStorage
+ * 3. Removing any other Supabase-related storage keys
+ * 
+ * This ensures a complete cleanup so the user is fully logged out and
+ * can't access protected resources until they sign in again.
  */
 export async function signOut(): Promise<void> {
   try {
-    // Sign out from Supabase (this should clear the session)
+    // Invalidate session on Supabase server
     const { error } = await supabase.auth.signOut();
     if (error) {
       throw new Error(error.message);
     }
     
-    // Explicitly clear the token from localStorage to ensure complete cleanup
+    // Clear all authentication data from localStorage
     if (typeof window !== 'undefined' && window.localStorage) {
       const tokenKey = 'supabase.auth.token';
       localStorage.removeItem(tokenKey);
       
-      // Also clear any other Supabase-related keys that might exist
+      // Find and remove any other Supabase-related keys
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -288,7 +327,7 @@ export async function signOut(): Promise<void> {
     }
   } catch (error) {
     console.error('Error during sign out:', error);
-    // Even if there's an error, try to clear localStorage
+    // Even if there's an error, try to clear localStorage as fallback
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.removeItem('supabase.auth.token');
     }
@@ -297,12 +336,23 @@ export async function signOut(): Promise<void> {
 }
 
 /**
- * Get current authenticated user and session
- * Follows Supabase best practices
+ * Get Current Authenticated User
+ * 
+ * Retrieves the currently logged-in user's profile from the database. This function:
+ * 
+ * 1. Gets the current session (with 3-second timeout to prevent hanging)
+ * 2. Checks if session is expired and refreshes if needed (fallback)
+ * 3. Fetches user profile from database (with timeout)
+ * 4. Creates profile if it doesn't exist (edge case handling)
+ * 
+ * Note: Supabase automatically refreshes tokens, but this function includes
+ * a fallback refresh in case the auto-refresh hasn't happened yet.
+ * 
+ * Returns: User object if authenticated, null if not
  */
 export async function getCurrentUser(): Promise<User | null> {
   try {
-    // Get current session first with timeout
+    // Get session with timeout to prevent hanging on slow networks
     const sessionPromise = supabase.auth.getSession();
     const timeoutPromise = new Promise<null>((resolve) => 
       setTimeout(() => resolve(null), 3000)
@@ -319,7 +369,6 @@ export async function getCurrentUser(): Promise<User | null> {
 
     if (sessionError) {
       console.error('Session error:', sessionError);
-      // Clear invalid session
       await supabase.auth.signOut();
       return null;
     }
@@ -328,13 +377,10 @@ export async function getCurrentUser(): Promise<User | null> {
       return null;
     }
 
-    // Supabase automatically handles token refresh in the background
-    // If session exists, it should be valid (or will be refreshed automatically)
-    // Only manually refresh if session is clearly expired and Supabase hasn't refreshed it yet
+    // Check if session is expired (fallback - Supabase usually handles this automatically)
     const now = Math.floor(Date.now() / 1000);
     if (session.expires_at && session.expires_at < now) {
-      // Session expired - Supabase should have refreshed automatically, but try once as fallback
-      console.log('Session expired, Supabase should refresh automatically. Attempting manual refresh as fallback...');
+      console.log('Session expired, attempting manual refresh as fallback...');
       try {
         const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
         
@@ -344,13 +390,12 @@ export async function getCurrentUser(): Promise<User | null> {
           return null;
         }
         
-        // Use refreshed session
+        // Fetch user profile with refreshed session
         const refreshedSession = refreshData.session;
         if (!refreshedSession.user) {
           return null;
         }
         
-        // Continue with refreshed session
         const { data: userData, error } = await supabase
           .from('users')
           .select('*')
@@ -391,9 +436,8 @@ export async function getCurrentUser(): Promise<User | null> {
     const { data: userData, error } = profileResult;
 
     if (error) {
-      // If profile doesn't exist, try to create it
+      // Edge case: Profile doesn't exist, try to create it from auth metadata
       if (error.code === 'PGRST116') {
-        // Profile doesn't exist, try to create it using the function
         const username = session.user.user_metadata?.username || session.user.email?.split('@')[0] || 'user';
         const name = session.user.user_metadata?.name || username;
         
@@ -428,7 +472,12 @@ export async function getCurrentUser(): Promise<User | null> {
 }
 
 /**
- * Get current session
+ * Get Current Session
+ * 
+ * Retrieves the current authentication session from Supabase.
+ * This is a simple wrapper around Supabase's getSession method.
+ * 
+ * Returns: Session object if authenticated, null if not
  */
 export async function getSession() {
   const { data: { session }, error } = await supabase.auth.getSession();
@@ -439,8 +488,19 @@ export async function getSession() {
 }
 
 /**
- * Listen to auth state changes
- * Follows Supabase best practices for React
+ * Listen to Authentication State Changes
+ * 
+ * Sets up a listener that fires whenever the authentication state changes.
+ * This is used by AuthProvider to keep the Redux store in sync with auth state.
+ * 
+ * Events that trigger this:
+ * - SIGNED_IN: User just logged in
+ * - SIGNED_OUT: User logged out
+ * - TOKEN_REFRESHED: Access token was refreshed
+ * - USER_UPDATED: User profile was updated
+ * 
+ * The callback receives the event type, session, and user profile.
+ * Returns a subscription object that can be unsubscribed.
  */
 export function onAuthStateChange(
   callback: (event: string, session: Session | null, user: User | null) => void
@@ -466,7 +526,13 @@ export function onAuthStateChange(
 }
 
 /**
- * Refresh the current session
+ * Refresh Current Session
+ * 
+ * Manually refreshes the access token using the refresh token.
+ * Note: This is usually not needed as Supabase handles this automatically,
+ * but can be useful in edge cases or for testing.
+ * 
+ * Returns: Refreshed session object
  */
 export async function refreshSession() {
   const { data: { session }, error } = await supabase.auth.refreshSession();
@@ -477,8 +543,13 @@ export async function refreshSession() {
 }
 
 /**
- * Ensure session is valid, refresh if needed
- * Call this before making authenticated API calls
+ * Ensure Session is Valid
+ * 
+ * Validates that the current session exists and is not expired.
+ * If expired, attempts to refresh it. This is useful before making
+ * authenticated API calls to ensure the request will succeed.
+ * 
+ * Returns: true if session is valid, false if not
  */
 export async function ensureValidSession(): Promise<boolean> {
   try {
@@ -494,12 +565,9 @@ export async function ensureValidSession(): Promise<boolean> {
       return false;
     }
 
-    // Supabase automatically refreshes tokens in the background
-    // If session exists, it should be valid (or will be refreshed automatically)
-    // Only check if session is clearly expired as a fallback
+    // Check if session is expired (fallback - Supabase usually handles this)
     const now = Math.floor(Date.now() / 1000);
     if (session.expires_at && session.expires_at < now) {
-      // Session expired - Supabase should refresh automatically, but try once as fallback
       console.log('Session expired, attempting refresh as fallback...');
       const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
       

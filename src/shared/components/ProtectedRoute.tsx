@@ -8,24 +8,43 @@ interface ProtectedRouteProps {
 }
 
 /**
- * Protected Route Component
- * Redirects to login if user is not authenticated
- * Works on any screen - automatically redirects when session expires
+ * ProtectedRoute Component - The Security Guard for Pages
+ * 
+ * This component wraps pages that require authentication. It acts like a bouncer
+ * at a club - checking if you're on the guest list (logged in) before letting you in.
+ * 
+ * How it works:
+ * 1. Checks Redux store for current user
+ * 2. Verifies session with Supabase
+ * 3. If not authenticated: Redirects to login page
+ * 4. If authenticated: Renders the protected content
+ * 
+ * It also periodically checks the session to catch cases where:
+ * - User logged out in another tab
+ * - Session expired
+ * - Token was revoked
+ * 
+ * The component preserves the intended destination so after login, users
+ * can be redirected back to where they were trying to go.
  */
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const currentUser = useAppSelector((state) => state.users.currentUser);
   const location = useLocation();
 
   useEffect(() => {
-    // Supabase automatically handles token refresh in the background
-    // We only need to check if a session exists, not manually refresh
+    /**
+     * Session Validation Check
+     * 
+     * This function verifies that the user has a valid session. Even though
+     * Supabase handles token refresh automatically, we still need to check
+     * if a session exists at all (user might have logged out elsewhere).
+     */
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        // If no session or error, redirect to login (Supabase will handle refresh automatically if session exists)
+        // No session or error means user is not authenticated
         if (error || !session?.user) {
-          // Session invalid or doesn't exist, redirect to login
           const publicRoutes = ['/login', '/signup', '/home', '/auth/callback', '/auth/verify'];
           if (!publicRoutes.includes(location.pathname)) {
             window.location.href = '/login';
@@ -33,7 +52,6 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
         }
       } catch (error) {
         console.error('Error checking session:', error);
-        // On error, redirect to login if not already there
         const publicRoutes = ['/login', '/signup', '/home', '/auth/callback', '/auth/verify'];
         if (!publicRoutes.includes(location.pathname)) {
           window.location.href = '/login';
@@ -41,28 +59,29 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       }
     };
 
-    // Check immediately on mount
+    // Check immediately when component mounts
     checkSession();
 
-    // Check periodically (less frequently since Supabase handles refresh automatically)
-    // This is just a safety check to ensure user state is in sync
-    const interval = setInterval(checkSession, 1 * 60 * 1000); // Every 1 minutes
+    // Periodic check every minute to catch session changes
+    // (e.g., user logged out in another tab)
+    const interval = setInterval(checkSession, 1 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, [location.pathname]);
 
-  // If no user and not on public routes, redirect to login
+  // If no user in Redux store, check if we're on a public route
   if (!currentUser) {
-    // Allow access to public routes
     const publicRoutes = ['/login', '/signup', '/home', '/auth/callback', '/auth/verify'];
     if (publicRoutes.includes(location.pathname)) {
+      // Allow access to public routes even without user
       return <>{children}</>;
     }
     
-    // Redirect to login for protected routes
+    // Redirect to login, preserving the intended destination
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // User is authenticated - render the protected content
   return <>{children}</>;
 };
 
