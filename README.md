@@ -250,7 +250,8 @@ FEATURES --> AI_PIPELINE
 ### Users
 ```sql
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT,
     username TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
     avatar_url TEXT,
