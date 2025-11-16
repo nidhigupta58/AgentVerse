@@ -1,75 +1,416 @@
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+/**
+ * User Profile Page
+ * 
+ * Displays a user's profile with their posts, comments, and AI agents.
+ * 
+ * Features:
+ * - User profile information (name, username, avatar, bio)
+ * - Tabbed interface:
+ *   - Tab 0: User's AI Agents
+ *   - Tab 1: Posts by user's agents
+ *   - Tab 2: Posts by the user
+ * - Post count and comment count
+ * - Swipeable tabs on mobile
+ * - Logout functionality (if viewing own profile)
+ * - Edit profile link (if viewing own profile)
+ * 
+ * The page fetches:
+ * - User data by ID
+ * - All posts (to filter by author)
+ * - All comments (to filter by author)
+ * - All agents (to show user's agents)
+ * 
+ * If viewing own profile, additional options are available:
+ * - Logout button
+ * - Settings link
+ * - Edit profile
+ */
+import { useEffect, useState, useRef } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
-import { fetchUserById } from '@/features/users/model/slice';
+import { fetchUserById, signOutUser } from '@/features/users/model/slice';
 import { fetchPosts } from '@/features/posts/model/slice';
-import { Navbar } from '@/widgets/navbar';
+import { fetchAgents } from '@/features/agents/model/slice';
+import { fetchAllComments } from '@/features/comments/model/slice';
+import { BottomNav } from '@/widgets/bottom-nav';
 import { PostCard } from '@/widgets/post-card';
 import { Loading } from '@/shared/ui/Loading';
 import { Card } from '@/shared/ui/Card';
-import { getInitials, formatDate } from '@/shared/lib/utils';
+import { Button } from '@/shared/ui/Button';
+import { getInitials } from '@/shared/lib/utils';
 
 export const UserProfilePage = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.users.currentUser);
   const { users } = useAppSelector((state) => state.users);
   const { posts } = useAppSelector((state) => state.posts);
+  const { agents } = useAppSelector((state) => state.agents);
+  const { comments } = useAppSelector((state) => state.comments);
 
   const user = users.find((u) => u.id === id);
   const userPosts = posts.filter((p) => p.author_type === 'user' && p.author_id === id);
+  const userComments = comments.filter((c) => c.author_type === 'user' && c.author_id === id);
+  const userAgents = agents.filter((a) => a.owner_id === id);
+  const agentPosts = posts.filter((p) => p.author_type === 'agent' && userAgents.some(a => a.id === p.author_id));
+  const isOwnProfile = currentUser?.id === id;
+
+  // Tab state: 0 = Agents, 1 = Agent Posts, 2 = User Posts
+  const [activeTab, setActiveTab] = useState(0);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const swipeContainerRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuDropdownRef = useRef<HTMLDivElement>(null);
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
 
   useEffect(() => {
     if (id) {
       dispatch(fetchUserById(id));
       dispatch(fetchPosts());
+      dispatch(fetchAgents());
+      dispatch(fetchAllComments());
     }
   }, [id, dispatch]);
 
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const isOutsideButton = menuButtonRef.current && !menuButtonRef.current.contains(target);
+      const isOutsideDropdown = menuDropdownRef.current && !menuDropdownRef.current.contains(target);
+      
+      if (isOutsideButton && isOutsideDropdown) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
+
+  const handleLogoutClick = () => {
+    setShowMenu(false);
+    setShowLogoutConfirm(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    try {
+      await dispatch(signOutUser());
+      setShowLogoutConfirm(false);
+      navigate('/home');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      setShowLogoutConfirm(false);
+      navigate('/home');
+    }
+  };
+
+  const handleCancelLogout = () => {
+    setShowLogoutConfirm(false);
+  };
+
+  // Handle touch start
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchEndX.current = null;
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  // Handle touch move
+  const onTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  // Handle touch end and determine swipe direction
+  const onTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && activeTab < 2) {
+      setActiveTab(activeTab + 1);
+    }
+    if (isRightSwipe && activeTab > 0) {
+      setActiveTab(activeTab - 1);
+    }
+  };
+
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
+      <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
         <Loading />
+        <BottomNav />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <Card className="mb-6">
-          <div className="flex items-center space-x-6">
-            {user.avatar_url ? (
-              <img
-                src={user.avatar_url}
-                alt={user.username}
-                className="w-24 h-24 rounded-full"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full bg-primary text-white flex items-center justify-center font-bold text-3xl">
-                {getInitials(user.username)}
-              </div>
-            )}
+    <div className="min-h-screen bg-[#F7F9FC] pb-16">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6">
+        {/* Top Header: Username and Menu */}
+        <div className="flex justify-between items-center mb-6 relative">
+          <h1 className="text-[20px] md:text-[24px] font-bold text-text">{user.username}</h1>
+          {isOwnProfile && (
+            <>
+              <button
+                ref={menuButtonRef}
+                onClick={() => setShowMenu(!showMenu)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Menu"
+              >
+                <svg
+                  className="w-6 h-6 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+                  />
+                </svg>
+              </button>
+              {showMenu && (
+                <div
+                  ref={menuDropdownRef}
+                  className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg z-50 overflow-hidden p-3 origin-top-right animate-[fadeInScale_0.2s_ease-out] border border-gray-200"
+                >
+                  <Link
+                    to="/settings"
+                    onClick={() => setShowMenu(false)}
+                    className="block w-full py-2 px-4 rounded-md text-[14px] font-semibold text-primary border-2 border-primary hover:bg-primary hover:text-white transition-colors mb-2"
+                  >
+                    Settings
+                  </Link>
+                  <button
+                    onClick={handleLogoutClick}
+                    className="block w-full py-2 px-4 rounded-md text-[14px] font-semibold text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white transition-colors"
+                  >
+                    Log out
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Profile Picture - Centered (Bigger) */}
+        <div className="flex justify-center mb-6">
+          {user.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt={user.username}
+              className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white shadow-lg"
+            />
+          ) : (
+            <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-primary text-white flex items-center justify-center font-bold text-3xl md:text-5xl border-4 border-white shadow-lg">
+              {getInitials(user.username)}
+            </div>
+          )}
+        </div>
+
+        {/* Stats Section */}
+        <Card className="mb-6 p-4 md:p-6">
+          <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <h1 className="text-3xl font-bold text-text mb-2">{user.username}</h1>
-              <p className="text-gray-600 mb-1">{user.email}</p>
-              <p className="text-sm text-gray-500">Joined {formatDate(user.created_at)}</p>
-              <p className="text-sm text-gray-500 mt-2">{userPosts.length} posts</p>
+              <p className="text-[20px] md:text-[24px] font-bold text-text">{userPosts.length}</p>
+              <p className="text-[12px] md:text-[13px] text-gray-500">Posts</p>
+            </div>
+            <div>
+              <p className="text-[20px] md:text-[24px] font-bold text-text">{userComments.length}</p>
+              <p className="text-[12px] md:text-[13px] text-gray-500">Comments</p>
+            </div>
+            <div>
+              <p className="text-[20px] md:text-[24px] font-bold text-text">{userAgents.length}</p>
+              <p className="text-[12px] md:text-[13px] text-gray-500">Agents</p>
             </div>
           </div>
         </Card>
-        <h2 className="text-2xl font-bold text-text mb-4">Posts</h2>
-        <div className="space-y-4">
-          {userPosts.length === 0 ? (
-            <Card>
-              <p className="text-center text-gray-500 py-8">No posts yet.</p>
-            </Card>
-          ) : (
-            userPosts.map((post) => <PostCard key={post.id} post={post} />)
-          )}
+
+        {/* Tabs Navigation */}
+        <div className="mb-4 border-b border-gray-200">
+          <div className="flex">
+            <button
+              onClick={() => setActiveTab(0)}
+              className={`flex-1 py-3 px-4 text-center font-medium text-[14px] md:text-[15px] transition-colors relative ${
+                activeTab === 0
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Agents
+            </button>
+            <button
+              onClick={() => setActiveTab(1)}
+              className={`flex-1 py-3 px-4 text-center font-medium text-[14px] md:text-[15px] transition-colors relative ${
+                activeTab === 1
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Agent Posts
+            </button>
+            <button
+              onClick={() => setActiveTab(2)}
+              className={`flex-1 py-3 px-4 text-center font-medium text-[14px] md:text-[15px] transition-colors relative ${
+                activeTab === 2
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              User Posts
+            </button>
+          </div>
+        </div>
+
+        {/* Swipeable Content Container */}
+        <div
+          ref={swipeContainerRef}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          className="relative"
+        >
+          {/* Section 1: Agents (Tab 0) */}
+          <div className={activeTab === 0 ? 'block' : 'hidden'}>
+            <div className="space-y-3">
+              {userAgents.length === 0 ? (
+                <Card className="p-4 md:p-6">
+                  <p className="text-center text-gray-500 py-6 md:py-8 text-[13px] md:text-[14px]">No agents yet.</p>
+                </Card>
+              ) : (
+                userAgents.map((agent) => (
+                  <Link key={agent.id} to={`/agent/${agent.id}`}>
+                    <Card className="p-4 md:p-6 hover:shadow-md transition-all duration-200">
+                      <div className="flex items-center space-x-3 md:space-x-4">
+                        {agent.avatar_url ? (
+                          <img
+                            src={agent.avatar_url}
+                            alt={agent.name}
+                            className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm md:text-lg flex-shrink-0">
+                            {getInitials(agent.name)}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h3 className="font-semibold text-text text-[15px] md:text-[16px] truncate">{agent.name}</h3>
+                            <span className="text-sm">🤖</span>
+                          </div>
+                          {agent.username && (
+                            <p className="text-[13px] md:text-[14px] text-gray-500 truncate">@{agent.username}</p>
+                          )}
+                          {agent.persona && (
+                            <p className="text-[12px] md:text-[13px] text-gray-600 line-clamp-2 mt-1">{agent.persona}</p>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  </Link>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Section 2: Agent Posts (Tab 1) */}
+          <div className={activeTab === 1 ? 'block' : 'hidden'}>
+            <div className="space-y-3 md:space-y-4">
+              {agentPosts.length === 0 ? (
+                <Card className="p-4 md:p-6">
+                  <p className="text-center text-gray-500 py-6 md:py-8 text-[13px] md:text-[14px]">No posts by agents yet.</p>
+                </Card>
+              ) : (
+                agentPosts.map((post) => (
+                  <PostCard 
+                    key={post.id} 
+                    post={post} 
+                    showDelete={isOwnProfile}
+                    onDelete={() => dispatch(fetchPosts())}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Section 3: User Posts (Tab 2) */}
+          <div className={activeTab === 2 ? 'block' : 'hidden'}>
+            <div className="space-y-3 md:space-y-4">
+              {userPosts.length === 0 ? (
+                <Card className="p-4 md:p-6">
+                  <p className="text-center text-gray-500 py-6 md:py-8 text-[13px] md:text-[14px]">No posts yet.</p>
+                </Card>
+              ) : (
+                userPosts.map((post) => (
+                  <PostCard 
+                    key={post.id} 
+                    post={post} 
+                    showDelete={isOwnProfile}
+                    onDelete={() => dispatch(fetchPosts())}
+                  />
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleCancelLogout}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-[fadeInScale_0.2s_ease-out]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-orange-100 rounded-full">
+              <svg
+                className="w-6 h-6 text-orange-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-text text-center mb-2">Log Out</h3>
+            <p className="text-gray-600 text-center mb-6 text-[14px]">
+              Are you sure you want to log out? You'll need to sign in again to access your account.
+            </p>
+            <div className="flex space-x-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={handleCancelLogout}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={handleConfirmLogout}
+              >
+                Log Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <BottomNav />
     </div>
   );
 };
