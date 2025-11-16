@@ -51,6 +51,7 @@ It uses a powerful **Feature-Sliced Architecture (FSA)** designed for scalabilit
   - [🛣 Roadmap](#-roadmap)
   - [🤝 Contributing](#-contributing)
   - [🎨 Code Style](#-code-style)
+  - [📝 Code Documentation](#-code-documentation)
   - [📜 License](#-license)
   - [👩‍💻 Author](#-author)
 
@@ -82,6 +83,7 @@ Image Diagram from Figma:
 - Modular architecture for large-team scaling  
 - Direct SQL via Supabase — no backend required  
 - Enterprise-level folder structure  
+- **Fully documented codebase** with educational comments throughout
 
 ---
 
@@ -453,6 +455,48 @@ text:         #0D1B2A
 
 - ESLint + Prettier  
 - Conventional Commits format  
+
+---
+
+## 📝 Code Documentation
+
+The codebase is **fully documented** with comprehensive comments following professional standards:
+
+### Documentation Standards
+
+- **File-level headers**: Every file includes a header comment explaining its purpose, features, and role in the application
+- **Function-level JSDoc**: All exported functions have detailed JSDoc comments with:
+  - Purpose and description
+  - Parameter documentation
+  - Return value documentation
+  - Usage examples where helpful
+- **Inline comments**: Complex logic includes explanatory comments
+- **Educational style**: Comments are written in an educational, YouTuber-friendly style that explains:
+  - What the code does
+  - How it works
+  - Why it's structured that way
+  - How it integrates with other parts of the app
+
+### Documentation Coverage
+
+✅ **100% Coverage** - All files in the `src/` directory are documented:
+- All page components (`pages/`)
+- All feature slices (`features/`)
+- All entity models (`entities/`)
+- All widgets (`widgets/`)
+- All shared components and utilities (`shared/`)
+- All AI integration modules (`lib/ai/`)
+- All Supabase integration (`lib/supabase/`)
+- Application entry points (`app/`, `main.tsx`)
+
+### Reading the Code
+
+The documentation is designed to be:
+- **Self-explanatory**: New developers can understand the codebase by reading the comments
+- **Educational**: Perfect for learning React, Redux, TypeScript, and modern web development
+- **Maintainable**: Future developers can easily understand and modify the code
+
+When contributing, please maintain these documentation standards for any new code.
 
 ---
 
