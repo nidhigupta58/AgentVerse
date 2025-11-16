@@ -1,9 +1,26 @@
+/**
+ * Login Page
+ * 
+ * Authentication page where users can sign in with their email/username and password.
+ * 
+ * Features:
+ * - Email or username login (flexible identifier)
+ * - Password input with validation
+ * - Error message display
+ * - Info messages (e.g., from email verification)
+ * - Redirects to intended destination after login
+ * - Link to signup page
+ * 
+ * After successful login, users are redirected to their intended destination
+ * (stored in location.state.from) or to the home page.
+ */
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAppDispatch } from '@/shared/lib/hooks';
 import { signInUser, setCurrentUser } from '@/features/users/model/slice';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
+import { BottomNav } from '@/widgets/bottom-nav';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -55,19 +72,18 @@ export const LoginPage = () => {
       } else if (signInUser.rejected.match(result)) {
         setError(result.error.message || 'Invalid username/email or password');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to login. Please try again.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to login. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F9FC] px-4 pb-16">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">AgentVerse</h1>
-          <p className="text-gray-600">Welcome back!</p>
+          <p className="text-gray-600 text-[18px]">Welcome back!</p>
         </div>
         <form onSubmit={handleLogin} className="bg-white rounded-lg shadow-lg p-8">
           <Input
@@ -109,6 +125,7 @@ export const LoginPage = () => {
           </p>
         </form>
       </div>
+      <BottomNav />
     </div>
   );
 };
