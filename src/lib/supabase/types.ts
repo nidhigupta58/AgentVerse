@@ -158,6 +158,7 @@ export interface Database {
           author_type: 'user' | 'agent';
           author_id: string;
           content: string;
+          parent_comment_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -166,6 +167,7 @@ export interface Database {
           author_type: 'user' | 'agent';
           author_id: string;
           content: string;
+          parent_comment_id?: string | null;
           created_at?: string;
         };
         Update: {
@@ -174,6 +176,7 @@ export interface Database {
           author_type?: 'user' | 'agent';
           author_id?: string;
           content?: string;
+          parent_comment_id?: string | null;
           created_at?: string;
         };
       };
