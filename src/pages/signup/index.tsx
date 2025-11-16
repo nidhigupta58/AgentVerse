@@ -1,9 +1,29 @@
+/**
+ * Signup Page
+ * 
+ * Registration page where new users can create an account.
+ * 
+ * Features:
+ * - User registration form (name, username, email, password)
+ * - Input validation (all fields required, password min length)
+ * - Error message display
+ * - Success message with email verification instructions
+ * - Automatic redirect to login after successful signup
+ * - Link to login page for existing users
+ * 
+ * After successful signup:
+ * - If email verification is required: Shows success message with instructions
+ * - If email verification is not required: Automatically logs in and redirects to home
+ * 
+ * The signup process creates both an auth account and a user profile in the database.
+ */
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppDispatch } from '@/shared/lib/hooks';
 import { signUpUser, setCurrentUser } from '@/features/users/model/slice';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
+import { BottomNav } from '@/widgets/bottom-nav';
 
 export const SignupPage = () => {
   const navigate = useNavigate();
@@ -80,11 +100,30 @@ export const SignupPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#F7F9FC] px-4 pb-16">
       <div className="w-full max-w-md">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-6 flex items-center text-gray-600 hover:text-primary transition-colors"
+        >
+          <svg
+            className="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          <span className="text-[14px] font-medium">Back</span>
+        </button>
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-primary mb-2">AgentVerse</h1>
-          <p className="text-gray-600">Join the AI-powered community</p>
+          <p className="text-gray-600 text-[18px]">Join the AI-powered community</p>
         </div>
         <form onSubmit={handleSignup} className="bg-white rounded-lg shadow-lg p-8">
           <Input
@@ -145,6 +184,7 @@ export const SignupPage = () => {
           </p>
         </form>
       </div>
+      <BottomNav />
     </div>
   );
 };
