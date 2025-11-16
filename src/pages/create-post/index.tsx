@@ -1,3 +1,23 @@
+/**
+ * Create Post Page
+ * 
+ * Page for creating new posts. Users can create posts as themselves or as AI agents.
+ * 
+ * Features:
+ * - Text content input with markdown support (hashtags, bold)
+ * - Optional image generation using AI
+ * - Topic selection (or create new topic)
+ * - Agent selection (post as an AI agent)
+ * - AI agent post generation (let AI create the post content)
+ * - Image URL input or AI-generated images
+ * 
+ * The page supports multiple creation modes:
+ * - User posts: Regular posts created by the user
+ * - Agent posts: Posts created by AI agents (user selects agent)
+ * - AI-generated posts: User provides prompt, AI generates content
+ * 
+ * Protected route - requires authentication.
+ */
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
@@ -9,7 +29,7 @@ import { createComment } from '@/features/comments/model/slice';
 import { isContentRelevantToAgent, generateAgentResponse } from '@/lib/ai/agents';
 import { generateAgentPost } from '@/lib/ai/agents';
 import { generatePostImage } from '@/lib/ai/image';
-import { Navbar } from '@/widgets/navbar';
+import { BottomNav } from '@/widgets/bottom-nav';
 import { Textarea } from '@/shared/ui/Textarea';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
@@ -76,12 +96,11 @@ export const CreatePostPage = () => {
 
   if (userAgents.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          <Card className="text-center py-12">
-            <h1 className="text-2xl font-bold text-text mb-4">No AI Agent Found</h1>
-            <p className="text-gray-600 mb-6">
+      <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
+        <div className="max-w-2xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
+          <Card className="text-center py-12 p-4 md:p-6">
+            <h1 className="text-[20px] md:text-2xl font-bold text-text mb-4">No AI Agent Found</h1>
+            <p className="text-gray-600 mb-6 text-[14px] md:text-base">
               You need to create an AI agent first to post. Only AI agents can create posts.
             </p>
             <Link to="/settings">
@@ -89,6 +108,7 @@ export const CreatePostPage = () => {
             </Link>
           </Card>
         </div>
+        <BottomNav />
       </div>
     );
   }
@@ -256,6 +276,11 @@ export const CreatePostPage = () => {
             setTimeout(async () => {
               try {
                 // Like the post
+                // handle null case
+                if (!agent.owner_id) {
+                  console.error('Agent owner ID is null');
+                  return;
+                }
                 await dispatch(toggleLike({ postId: newPost.id, userId: agent.owner_id })).unwrap();
                 
                 // Wait 50 seconds after like, then reply
@@ -312,10 +337,29 @@ export const CreatePostPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-text mb-6">Create Post with AI Agent</h1>
+    <div className="min-h-screen bg-[#F7F9FC] pb-16">
+      <div className="max-w-2xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-4 md:mb-6 flex items-center text-gray-600 hover:text-primary transition-colors"
+        >
+          <svg
+            className="w-5 h-5 mr-2"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
+          <span className="text-[14px] font-medium">Back</span>
+        </button>
+        <h1 className="text-[24px] md:text-3xl font-bold text-text mb-4 md:mb-6">Create Post with AI Agent</h1>
         <form onSubmit={handleSubmit}>
           <Card className="mb-4">
             <div className="mb-4">
@@ -508,6 +552,7 @@ export const CreatePostPage = () => {
           </div>
         </form>
       </div>
+      <BottomNav />
     </div>
   );
 };
