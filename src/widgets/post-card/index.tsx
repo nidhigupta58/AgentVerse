@@ -1,3 +1,34 @@
+/**
+ * PostCard Component - Post Display with Interactions
+ * 
+ * A comprehensive component that displays a post with all its interactive features.
+ * This is one of the most complex components in the app, handling:
+ * 
+ * Features:
+ * - Post content display (text, images, hashtags, bold formatting)
+ * - Author information (user or AI agent)
+ * - Like functionality (toggle likes, display like count)
+ * - Comment system (view comments, add comments, reply to comments)
+ * - Comment likes (like/unlike comments)
+ * - Post deletion (with confirmation, only for owners)
+ * - AI agent mentions (detects @mentions and generates agent responses)
+ * - Real-time updates (fetches likes/comments when post changes)
+ * 
+ * State Management:
+ * - Fetches and displays likes for the post
+ * - Fetches and displays comments for the post
+ * - Fetches likes for each comment (to avoid infinite loops, tracks fetched IDs)
+ * - Manages comment/reply input state
+ * - Handles delete confirmation dialog
+ * 
+ * AI Integration:
+ * - Detects when agents are mentioned in comments
+ * - Generates AI agent responses when relevant
+ * - Checks if content is relevant to an agent before responding
+ * 
+ * Usage:
+ * <PostCard post={post} showDelete={true} onDelete={handleDelete} />
+ */
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
@@ -16,9 +47,11 @@ import type { PostWithAuthor } from '@/entities/post/model';
 
 interface PostCardProps {
   post: PostWithAuthor;
+  showDelete?: boolean;
+  onDelete?: () => void;
 }
 
-export const PostCard: React.FC<PostCardProps> = ({ post }) => {
+export const PostCard: React.FC<PostCardProps> = ({ post, showDelete = false, onDelete }) => {
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.users.currentUser);
   const users = useAppSelector((state) => state.users.users);
@@ -30,6 +63,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [commentContent, setCommentContent] = useState('');
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState<{ [key: string]: string }>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const fetchedCommentIds = useRef<Set<string>>(new Set());
 
   const postLikes = likes.filter((l) => l.post_id === post.id);
@@ -94,19 +128,29 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
     }
   };
 
-  const handleDeletePost = async (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!canDeletePost) return;
-    
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      try {
-        await dispatch(deletePost(post.id)).unwrap();
-      } catch (error) {
-        console.error('Failed to delete post:', error);
-        alert('Failed to delete post. Please try again.');
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    try {
+      await dispatch(deletePost(post.id)).unwrap();
+      setShowDeleteConfirm(false);
+      if (onDelete) {
+        onDelete();
       }
+    } catch (error) {
+      console.error('Failed to delete post:', error);
+      alert('Failed to delete post. Please try again.');
+      setShowDeleteConfirm(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setShowDeleteConfirm(false);
   };
 
   const handleLikeComment = async (commentId: string, e: React.MouseEvent) => {
@@ -267,75 +311,96 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
   };
 
   return (
-    <Card>
-      <div className="flex items-start space-x-4">
+    <Card className="p-4 md:p-6">
+      <div className="flex items-start space-x-3 md:space-x-4">
         <div className="flex-shrink-0">
           {author && (author as any).avatar_url ? (
             <img
               src={(author as any).avatar_url}
               alt={authorName}
-              className="w-12 h-12 rounded-full"
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover"
             />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[13px] md:text-[15px]">
               {getInitials(authorName)}
             </div>
           )}
         </div>
         <div className="flex-1 min-w-0">
           <Link to={`/post/${post.id}`} className="block">
-            <div className="flex items-center space-x-2 mb-2">
-              <span className="font-semibold text-text hover:underline">{authorName}</span>
-              <span className="text-sm text-gray-500">
+            <div className="flex items-center space-x-2 mb-2 md:mb-3 flex-wrap">
+              <span className="font-semibold text-[14px] md:text-[15px] text-text hover:underline">{authorName}</span>
+              <span className="text-[13px] md:text-[14px] text-gray-500">
                 {post.author_type === 'agent' && '🤖'}
               </span>
-              <span className="text-sm text-gray-500">·</span>
-              <span className="text-sm text-gray-500">{formatDate(post.created_at)}</span>
+              <span className="text-[13px] md:text-[14px] text-gray-500">·</span>
+              <span className="text-[13px] md:text-[14px] text-gray-500">{formatDate(post.created_at)}</span>
             </div>
-            <div className="text-gray-800 mb-3">
-              {formatTextWithHashtags(post.content).map((part, index) => 
-                part.isHashtag ? (
-                  <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer">
-                    {part.text}
-                  </span>
-                ) : (
-                  <span key={index}>{part.text}</span>
-                )
-              )}
+            <div className="text-gray-800 text-[14px] md:text-[15px] mb-3 md:mb-4 leading-relaxed break-words">
+              {formatTextWithHashtags(post.content).map((part, index) => {
+                if (part.isHashtag) {
+                  return (
+                    <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer mr-1.5">
+                      {part.text}
+                    </span>
+                  );
+                } else if (part.isBold) {
+                  return (
+                    <strong key={index} className="font-bold">{part.text}</strong>
+                  );
+                } else {
+                  return <span key={index}>{part.text}</span>;
+                }
+              })}
             </div>
             {post.image_url && (
-              <img
-                src={post.image_url}
-                alt="Post"
-                className="w-full rounded-lg mb-3 max-h-96 object-cover"
-              />
+              <div className="mb-3 md:mb-4 rounded-xl overflow-hidden">
+                <img
+                  src={post.image_url}
+                  alt="Post"
+                  className="w-full h-auto max-h-[300px] md:max-h-[500px] object-cover"
+                />
+              </div>
             )}
           </Link>
           
           {/* Like and Comment Actions */}
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center space-x-6">
+          <div className="flex items-center justify-between pt-2 md:pt-3 border-t border-gray-100">
+            <div className="flex items-center space-x-4 md:space-x-6">
               <button
                 onClick={handleLike}
-                className={`flex items-center space-x-2 ${isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
+                className={`flex items-center space-x-1.5 md:space-x-2 ${isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
               >
-                <span className="text-xl">❤️</span>
-                <span>{postLikes.length}</span>
+                <span className="text-lg md:text-xl">❤️</span>
+                <span className="text-[13px] md:text-[14px] font-medium">{postLikes.length}</span>
               </button>
               <button
                 onClick={handleCommentClick}
-                className="flex items-center space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
+                className="flex items-center space-x-1.5 md:space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
               >
-                <span className="text-xl">💬</span>
-                <span>{postComments.length}</span>
+                <span className="text-lg md:text-xl">💬</span>
+                <span className="text-[13px] md:text-[14px] font-medium">{postComments.length}</span>
               </button>
             </div>
-            {canDeletePost && (
+            {showDelete && canDeletePost && (
               <button
-                onClick={handleDeletePost}
-                className="text-red-500 hover:text-red-700 text-sm font-medium"
+                onClick={handleDeleteClick}
+                className="text-red-500 hover:text-red-700 transition-colors p-1.5 rounded-full hover:bg-red-50"
+                aria-label="Delete post"
               >
-                Delete
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  />
+                </svg>
               </button>
             )}
           </div>
@@ -343,18 +408,18 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
 
           {/* Expandable Comments Section */}
           {showComments && (
-            <div className="mt-4 pt-4 border-t">
-              <h3 className="font-semibold mb-3">Comments ({postComments.length})</h3>
+            <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-100">
+              <h3 className="font-semibold text-[16px] md:text-[18px] mb-3 md:mb-4 text-text">Comments ({postComments.length})</h3>
               
               {/* Comment Form (only for logged-in users) */}
               {currentUser ? (
-                <form onSubmit={handleSubmitComment} className="mb-4">
+                <form onSubmit={handleSubmitComment} className="mb-4 md:mb-6">
                   <Textarea
                     value={commentContent}
                     onChange={(e) => setCommentContent(e.target.value)}
                     placeholder="Write a comment..."
                     rows={2}
-                    className="mb-2"
+                    className="mb-2 md:mb-3 text-[13px] md:text-[14px]"
                     onClick={(e) => e.stopPropagation()}
                   />
                   <Button type="submit" size="sm">
@@ -362,8 +427,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                   </Button>
                 </form>
               ) : (
-                <div className="mb-4 p-3 bg-gray-50 rounded-lg text-center">
-                  <p className="text-sm text-gray-600 mb-2">Please login to comment</p>
+                <div className="mb-4 md:mb-6 p-3 md:p-4 bg-gray-50 rounded-lg text-center">
+                  <p className="text-[13px] md:text-[14px] text-gray-600 mb-2 md:mb-3">Please login to comment</p>
                   <Link to="/login">
                     <Button size="sm" variant="outline">Login</Button>
                   </Link>
@@ -371,7 +436,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
               )}
 
               {/* Comments List (visible to all users) */}
-              <div className="space-y-3 max-h-96 overflow-y-auto">
+              <div className="space-y-3 md:space-y-4 max-h-96 overflow-y-auto">
                 {postComments
                   .filter(c => !c.parent_comment_id) // Only show top-level comments
                   .map((comment) => {
@@ -389,46 +454,52 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                   const replies = postComments.filter(c => c.parent_comment_id === comment.id);
 
                   return (
-                    <div key={comment.id} className="pb-3 border-b last:border-0">
-                      <div className="flex items-start space-x-3">
+                    <div key={comment.id} className="pb-3 md:pb-4 border-b border-gray-100 last:border-0">
+                      <div className="flex items-start space-x-2 md:space-x-3">
                         <div className="flex-shrink-0">
                           {commentAuthor && (commentAuthor as any).avatar_url ? (
                             <img
                               src={(commentAuthor as any).avatar_url}
                               alt={commentAuthorName}
-                              className="w-8 h-8 rounded-full"
+                              className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover"
                             />
                           ) : (
-                            <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
+                            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
                               {getInitials(commentAuthorName)}
                             </div>
                           )}
                         </div>
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="font-semibold text-sm">{commentAuthorName}</span>
-                            {comment.author_type === 'agent' && <span className="text-xs">🤖</span>}
-                            <span className="text-xs text-gray-500">·</span>
-                            <span className="text-xs text-gray-500">{formatDate(comment.created_at)}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-1.5 md:space-x-2 mb-1.5 md:mb-2 flex-wrap">
+                            <span className="font-semibold text-[13px] md:text-[14px] text-text">{commentAuthorName}</span>
+                            {comment.author_type === 'agent' && <span className="text-[11px] md:text-[12px]">🤖</span>}
+                            <span className="text-[12px] md:text-[13px] text-gray-500">·</span>
+                            <span className="text-[12px] md:text-[13px] text-gray-500">{formatDate(comment.created_at)}</span>
                           </div>
-                          <div className="text-gray-700 text-sm mb-1">
-                            {formatTextWithHashtags(comment.content).map((part, index) => 
-                              part.isHashtag ? (
-                                <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer">
-                                  {part.text}
-                                </span>
-                              ) : (
-                                <span key={index}>{part.text}</span>
-                              )
-                            )}
+                          <div className="text-gray-700 text-[13px] md:text-[14px] mb-1.5 md:mb-2 leading-relaxed">
+                            {formatTextWithHashtags(comment.content).map((part, index) => {
+                              if (part.isHashtag) {
+                                return (
+                                  <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer mr-1.5">
+                                    {part.text}
+                                  </span>
+                                );
+                              } else if (part.isBold) {
+                                return (
+                                  <strong key={index} className="font-bold">{part.text}</strong>
+                                );
+                              } else {
+                                return <span key={index}>{part.text}</span>;
+                              }
+                            })}
                           </div>
-                          <div className="flex items-center space-x-3 mb-2">
+                          <div className="flex items-center space-x-3 md:space-x-4 mb-1.5 md:mb-2">
                             <button
                               onClick={(e) => handleLikeComment(comment.id, e)}
-                              className={`flex items-center space-x-1 text-xs ${isCommentLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
+                              className={`flex items-center space-x-1 text-[12px] md:text-[13px] ${isCommentLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
                             >
                               <span>❤️</span>
-                              <span>{thisCommentLikes.length}</span>
+                              <span className="font-medium">{thisCommentLikes.length}</span>
                             </button>
                             {currentUser && (
                               <button
@@ -437,7 +508,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                                   e.stopPropagation();
                                   setReplyingTo(replyingTo === comment.id ? null : comment.id);
                                 }}
-                                className="text-xs text-gray-500 hover:text-blue-500 transition-colors"
+                                className="text-[12px] md:text-[13px] text-gray-500 hover:text-blue-500 transition-colors font-medium"
                               >
                                 Reply
                               </button>
@@ -446,7 +517,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                           
                           {/* Reply form */}
                           {replyingTo === comment.id && currentUser && (
-                            <form onSubmit={(e) => handleSubmitReply(comment.id, e)} className="mt-2 ml-4 pl-4 border-l-2 border-gray-200">
+                            <form onSubmit={(e) => handleSubmitReply(comment.id, e)} className="mt-3 ml-4 pl-4 border-l-2 border-gray-200">
                               <Textarea
                                 value={replyContent[comment.id] || ''}
                                 onChange={(e) => {
@@ -455,7 +526,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                                 }}
                                 placeholder="Write a reply..."
                                 rows={2}
-                                className="mb-2 text-sm"
+                                className="mb-3 text-[14px]"
                                 onClick={(e) => e.stopPropagation()}
                               />
                               <div className="flex space-x-2">
@@ -485,7 +556,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                           
                           {/* Replies */}
                           {replies.length > 0 && (
-                            <div className="mt-2 ml-4 pl-4 border-l-2 border-gray-200 space-y-2">
+                            <div className="mt-3 ml-4 pl-4 border-l-2 border-gray-200 space-y-3">
                               {replies.map((reply) => {
                                 const replyAuthor = reply.author_type === 'user'
                                   ? users.find((u) => u.id === reply.author_id)
@@ -505,38 +576,44 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                                         <img
                                           src={(replyAuthor as any).avatar_url}
                                           alt={replyAuthorName}
-                                          className="w-7 h-7 rounded-full"
+                                          className="w-8 h-8 rounded-full object-cover"
                                         />
                                       ) : (
-                                        <div className="w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
+                                        <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">
                                           {getInitials(replyAuthorName)}
                                         </div>
                                       )}
                                     </div>
                                     <div className="flex-1">
                                       <div className="flex items-center space-x-2 mb-1">
-                                        <span className="font-semibold text-xs">{replyAuthorName}</span>
-                                        {reply.author_type === 'agent' && <span className="text-xs">🤖</span>}
-                                        <span className="text-xs text-gray-500">·</span>
-                                        <span className="text-xs text-gray-500">{formatDate(reply.created_at)}</span>
+                                        <span className="font-semibold text-[13px] text-text">{replyAuthorName}</span>
+                                        {reply.author_type === 'agent' && <span className="text-[12px]">🤖</span>}
+                                        <span className="text-[12px] text-gray-500">·</span>
+                                        <span className="text-[12px] text-gray-500">{formatDate(reply.created_at)}</span>
                                       </div>
-                                      <div className="text-gray-700 text-xs mb-1">
-                                        {formatTextWithHashtags(reply.content).map((part, index) => 
-                                          part.isHashtag ? (
-                                            <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer">
-                                              {part.text}
-                                            </span>
-                                          ) : (
-                                            <span key={index}>{part.text}</span>
-                                          )
-                                        )}
+                                      <div className="text-gray-700 text-[13px] mb-1 leading-relaxed">
+                                        {formatTextWithHashtags(reply.content).map((part, index) => {
+                                          if (part.isHashtag) {
+                                            return (
+                                              <span key={index} className="text-blue-600 font-semibold hover:text-blue-800 cursor-pointer mr-1.5">
+                                                {part.text}
+                                              </span>
+                                            );
+                                          } else if (part.isBold) {
+                                            return (
+                                              <strong key={index} className="font-bold">{part.text}</strong>
+                                            );
+                                          } else {
+                                            return <span key={index}>{part.text}</span>;
+                                          }
+                                        })}
                                       </div>
                                       <button
                                         onClick={(e) => handleLikeComment(reply.id, e)}
-                                        className={`flex items-center space-x-1 text-xs ${isReplyLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
+                                        className={`flex items-center space-x-1 text-[12px] ${isReplyLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
                                       >
                                         <span>❤️</span>
-                                        <span>{replyLikes.length}</span>
+                                        <span className="font-medium">{replyLikes.length}</span>
                                       </button>
                                     </div>
                                   </div>
@@ -550,13 +627,55 @@ export const PostCard: React.FC<PostCardProps> = ({ post }) => {
                   );
                 })}
                 {postComments.length === 0 && (
-                  <p className="text-gray-500 text-center py-4 text-sm">No comments yet. Be the first to comment!</p>
+                  <p className="text-gray-500 text-center py-4 md:py-6 text-[13px] md:text-[14px]">No comments yet. Be the first to comment!</p>
                 )}
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleCancelDelete}>
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 animate-[fadeInScale_0.2s_ease-out]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+              <svg
+                className="w-6 h-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-text text-center mb-2">Delete Post</h3>
+            <p className="text-gray-600 text-center mb-6 text-[14px]">
+              Are you sure you want to delete this post? This action cannot be undone.
+            </p>
+            <div className="flex space-x-3">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={handleCancelDelete}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleConfirmDelete}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Card>
   );
 };
