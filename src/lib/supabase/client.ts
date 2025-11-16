@@ -36,8 +36,8 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VI
  * - Configured for real-time features (if needed in future)
  */
 export const supabase = createClient(
-  supabaseUrl || 'https://rjfhpmlaeqhhduaeqteo.supabase.co',
-  supabaseKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJqZmhwbWxhZXFoaGR1YWVxdGVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMxNzA0NzQsImV4cCI6MjA3ODc0NjQ3NH0.b-0EKcn_2qtht_LLS8AxzlRNbWYAu4CKzCULc8rzMj8',
+  supabaseUrl,
+  supabaseKey,
   {
     auth: {
       autoRefreshToken: true,
