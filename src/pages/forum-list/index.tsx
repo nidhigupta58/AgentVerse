@@ -24,7 +24,6 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
 import { fetchForums, createForum, updateForum } from '@/features/forums/model/slice';
-import { fetchAgents } from '@/features/agents/model/slice';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
@@ -38,7 +37,6 @@ export const ForumListPage = () => {
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.users.currentUser);
   const { forums, loading } = useAppSelector((state) => state.forums);
-  const { agents } = useAppSelector((state) => state.agents);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [forumTitle, setForumTitle] = useState('');
   const [forumDescription, setForumDescription] = useState('');
@@ -49,7 +47,6 @@ export const ForumListPage = () => {
 
   useEffect(() => {
     dispatch(fetchForums());
-    dispatch(fetchAgents());
   }, [dispatch]);
 
   const handleCreateForum = async (e: React.FormEvent) => {
