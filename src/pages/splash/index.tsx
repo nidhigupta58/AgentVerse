@@ -1,3 +1,29 @@
+/**
+ * Splash Page
+ * 
+ * Initial loading screen that appears when the app first loads. This page
+ * checks if the user is authenticated and redirects them accordingly.
+ * 
+ * Features:
+ * - Branded splash screen with logo and tagline
+ * - Loading spinner animation
+ * - Automatic authentication check
+ * - Session validation and refresh
+ * - Smart redirect logic:
+ *   - If authenticated: Redirect to /home
+ *   - If not authenticated: Redirect to /login
+ * 
+ * Flow:
+ * 1. Check for existing session in Supabase
+ * 2. If session exists, validate it (check expiration)
+ * 3. If expired, attempt to refresh
+ * 4. Fetch current user if session is valid
+ * 5. Redirect based on authentication status
+ * 
+ * The page includes timeout handling (2 seconds) to prevent infinite loading
+ * if the auth check hangs. After checking, it waits 300ms for a smooth
+ * transition before redirecting.
+ */
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
