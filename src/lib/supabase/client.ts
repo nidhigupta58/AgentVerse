@@ -39,6 +39,11 @@ export const supabase = createClient(
   supabaseUrl,
   supabaseKey,
   {
+    db: {
+      // By default, Supabase exposes the 'public' schema. If your tables are in
+      // other schemas, you need to specify them here.
+      schema: 'public',
+    },
     auth: {
       autoRefreshToken: true,
       persistSession: true,
@@ -62,21 +67,78 @@ export const supabase = createClient(
  * verify their session is still valid. This listener automatically checks
  * and refreshes the session when the network reconnects.
  */
-if (typeof window !== 'undefined') {
-  window.addEventListener('online', async () => {
-    console.log('Network back online, checking session...');
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        // If session expires soon (within 10 minutes), refresh it
-        const now = Math.floor(Date.now() / 1000);
-        if (session.expires_at && session.expires_at < now + 600) {
-          await supabase.auth.refreshSession();
-        }
-      }
-    } catch (error) {
-      console.error('Error refreshing session after network reconnect:', error);
+
+/**
+ * A custom event to signal that the user's session has become invalid.
+ * The UI layer can listen for this event to redirect to the login page.
+ * 
+ * @example
+ * window.addEventListener('sessionInvalidated', () => {
+ *   // Redirect to login page
+ *   window.location.href = '/login';
+ * });
+ */
+export const sessionInvalidatedEvent = new Event('sessionInvalidated');
+
+/**
+ * Proactively refreshes the session if it's nearing expiration.
+ * This function is designed to be called when the app regains focus or network.
+ */
+const refreshSessionIfNeeded = async () => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.log('No active session found. User is likely logged out.');
+      return;
     }
+
+    const now = Math.floor(Date.now() / 1000);
+    const expiresAt = session.expires_at;
+    const REFRESH_THRESHOLD_SECONDS = 300; // 5 minutes
+
+    // If the token expires within the threshold or has already expired, refresh it.
+    if (expiresAt && expiresAt < now + REFRESH_THRESHOLD_SECONDS) {
+      console.log('Session is nearing expiration or has expired. Refreshing...');
+      const { error } = await supabase.auth.refreshSession();
+
+      if (error) {
+        console.error('Error refreshing session:', error.message);
+        // If the refresh fails, the session is truly invalid.
+        // Sign the user out and dispatch an event for the UI to handle.
+        await supabase.auth.signOut();
+        window.dispatchEvent(sessionInvalidatedEvent);
+      } else {
+        console.log('Session refreshed successfully.');
+      }
+    } else {
+      const expiresIn = expiresAt ? Math.round((expiresAt - now) / 60) : 0;
+      console.log(`Session is still valid. Expires in ~${expiresIn} minutes.`);
+    }
+  } catch (error) {
+    console.error('Error checking or refreshing session:', error);
+  }
+};
+
+
+/**
+ * Event Listeners for Session Management
+ * 
+ * These listeners handle scenarios where the app might lose and regain
+ * connectivity or focus, ensuring the user's session remains active.
+ */
+if (typeof window !== 'undefined') {
+  // 1. Listen for when the app tab becomes visible again
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      console.log('Tab is visible again, checking session...');
+      refreshSessionIfNeeded();
+    }
+  });
+
+  // 2. Listen for when the user comes back online
+  window.addEventListener('online', () => {
+    console.log('Network back online, checking session...');
+    refreshSessionIfNeeded();
   });
 
   window.addEventListener('offline', () => {
@@ -86,10 +148,7 @@ if (typeof window !== 'undefined') {
 
 // Validate environment variables on app start
 if (!supabaseUrl || !supabaseKey) {
-  console.error('⚠️ Missing Supabase environment variables!');
-  console.error('Please check your .env file and ensure:');
-  console.error('  - VITE_SUPABASE_URL is set');
-  console.error('  - VITE_SUPABASE_ANON_KEY is set');
-  console.error('The app will continue but Supabase features will not work.');
+  throw new Error(
+    'FATAL: Missing Supabase environment variables. Please check your .env file.'
+  );
 }
-
