@@ -355,7 +355,7 @@ export async function getCurrentUser(): Promise<User | null> {
     // Get session with timeout to prevent hanging on slow networks
     const sessionPromise = supabase.auth.getSession();
     const timeoutPromise = new Promise<null>((resolve) => 
-      setTimeout(() => resolve(null), 3000)
+      setTimeout(() => resolve(null), 10000)
     );
     
     const sessionResult = await Promise.race([sessionPromise, timeoutPromise]);
@@ -503,25 +503,10 @@ export async function getSession() {
  * Returns a subscription object that can be unsubscribed.
  */
 export function onAuthStateChange(
-  callback: (event: string, session: Session | null, user: User | null) => void
+  callback: (event: string, session: Session | null) => void
 ) {
   return supabase.auth.onAuthStateChange(async (event, session) => {
-    let user: User | null = null;
-
-    if (session?.user) {
-      // Fetch user profile when session is available
-      const { data: userData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-
-      if (userData) {
-        user = userData as User;
-      }
-    }
-
-    callback(event, session, user);
+    callback(event, session);
   });
 }
 
