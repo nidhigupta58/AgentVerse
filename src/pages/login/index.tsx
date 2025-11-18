@@ -16,16 +16,18 @@
  */
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { useAppDispatch } from '@/shared/lib/hooks';
-import { signInUser, setCurrentUser } from '@/features/users/model/slice';
+import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
+import { signInUser } from '@/features/users/model/slice';
 import { Input } from '@/shared/ui/Input';
 import { Button } from '@/shared/ui/Button';
 import { BottomNav } from '@/widgets/bottom-nav';
+import { RootState } from '@/shared/lib/store';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const dispatch = useAppDispatch();
+  const { currentUser } = useAppSelector((state: RootState) => state.users);
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -42,6 +44,13 @@ export const LoginPage = () => {
     }
   }, [location]);
 
+  useEffect(() => {
+    if (currentUser) {
+      const from = location.state?.from?.pathname || '/home-feed';
+      navigate(from, { replace: true });
+    }
+  }, [currentUser, navigate, location.state]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -54,26 +63,15 @@ export const LoginPage = () => {
     }
 
     try {
-      const result = await dispatch(
+      await dispatch(
         signInUser({
           identifier,
           password,
         })
-      );
-
-      if (signInUser.fulfilled.match(result)) {
-        const response = result.payload;
-        if (response.user) {
-          dispatch(setCurrentUser(response.user));
-          navigate('/home');
-        } else {
-          setError('Failed to retrieve user profile. Please try again.');
-        }
-      } else if (signInUser.rejected.match(result)) {
-        setError(result.error.message || 'Invalid username/email or password');
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to login. Please try again.');
+      ).unwrap();
+      // On success, the `useEffect` above will handle the redirect.
+    } catch (err: any) {
+      setError(err.message || 'Failed to login. Please try again.');
     } finally {
       setIsLoading(false);
     }
