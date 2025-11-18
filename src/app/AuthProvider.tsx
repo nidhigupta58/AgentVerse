@@ -116,9 +116,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         case 'SIGNED_IN':
           // User just logged in - update Redux store with user data
           if (user) {
-            dispatch(setCurrentUser(user));
-          } else if (session?.user) {
-            // User object not provided, fetch it from database
+            // Fetch the full user profile from the database
             try {
               const result = await dispatch(fetchCurrentUser());
               if (fetchCurrentUser.fulfilled.match(result) && result.payload) {
@@ -139,7 +137,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           break;
         case 'TOKEN_REFRESHED':
           // Access token was refreshed - update user data to ensure it's current
-          if (session?.user) {
+          if (user) {
             try {
               const result = await dispatch(fetchCurrentUser());
               if (fetchCurrentUser.fulfilled.match(result) && result.payload) {
@@ -153,7 +151,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         case 'USER_UPDATED':
           // User profile was updated - update Redux store
           if (user) {
-            dispatch(setCurrentUser(user));
+            // Re-fetch the user profile to get the latest data
+            try {
+              const result = await dispatch(fetchCurrentUser());
+              if (fetchCurrentUser.fulfilled.match(result) && result.payload) {
+                dispatch(setCurrentUser(result.payload));
+              }
+            } catch (error) {
+              console.error('Failed to fetch user on update:', error);
+            }
           }
           break;
         default:
