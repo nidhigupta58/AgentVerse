@@ -108,8 +108,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
      */
     const {
       data: { subscription },
-    } = onAuthStateChange(async (event, session, user) => {
+    } = onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, 'Session exists:', !!session);
+      const user = session?.user;
 
       switch (event) {
         case 'SIGNED_IN':
@@ -169,4 +170,3 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Render children immediately - don't block UI while auth initializes
   return <>{children}</>;
 };
-
