@@ -129,6 +129,34 @@ export const fetchCurrentUser = createAsyncThunk('users/fetchCurrentUser', async
 });
 
 /**
+ * Update User Avatar
+ * 
+ * Updates the avatar_url for a specific user in the database.
+ */
+export const updateUserAvatar = createAsyncThunk(
+  'users/updateUserAvatar',
+  async ({ userId, avatarUrl }: { userId: string; avatarUrl: string }, { rejectWithValue }) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating user avatar:', error);
+        return rejectWithValue(error.message || 'Failed to update avatar');
+      }
+      return data as User;
+    } catch (error: unknown) {
+      console.error('Unexpected error updating user avatar:', error);
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to update avatar');
+    }
+  }
+);
+
+/**
  * Users Slice
  * 
  * Defines the Redux slice with:
@@ -272,9 +300,33 @@ export const usersSlice = createSlice({
       .addCase(fetchCurrentUser.rejected, (state) => {
         state.loading = false;
         state.currentUser = null;
+      })
+      // Update User Avatar handlers
+      .addCase(updateUserAvatar.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateUserAvatar.fulfilled, (state, action) => {
+        state.loading = false;
+        const updatedUser = action.payload;
+        // Update currentUser if it's the one being updated
+        if (state.currentUser?.id === updatedUser.id) {
+          state.currentUser = updatedUser;
+        }
+        // Update user in the users array
+        const existingIndex = state.users.findIndex((u) => u.id === updatedUser.id);
+        if (existingIndex >= 0) {
+          state.users[existingIndex] = updatedUser;
+        }
+      })
+      .addCase(updateUserAvatar.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.error.message || 'Failed to update user avatar';
       });
   },
 });
 
 export const { setCurrentUser, clearError } = usersSlice.actions;
+
+
 
