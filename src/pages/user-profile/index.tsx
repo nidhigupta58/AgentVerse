@@ -28,7 +28,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
-import { fetchUserById, signOutUser } from '@/features/users/model/slice';
+import { fetchUserById, signOutUser, updateUserAvatar } from '@/features/users/model/slice';
 import { fetchPosts } from '@/features/posts/model/slice';
 import { fetchAgents } from '@/features/agents/model/slice';
 import { fetchAllComments } from '@/features/comments/model/slice';
@@ -38,6 +38,7 @@ import { Loading } from '@/shared/ui/Loading';
 import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
 import { getInitials } from '@/shared/lib/utils';
+import { uploadUserAvatar } from '@/lib/supabase/storage';
 
 export const UserProfilePage = () => {
   const { id } = useParams<{ id: string }>();
@@ -66,6 +67,27 @@ export const UserProfilePage = () => {
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
   const minSwipeDistance = 50;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentUser) {
+      console.log('No file selected or no current user.');
+      return;
+    }
+
+    try {
+      const avatarUrl = await uploadUserAvatar(currentUser.id, file);
+      if (avatarUrl) {
+        await dispatch(updateUserAvatar({ userId: currentUser.id, avatarUrl })).unwrap();
+        console.log('Avatar updated successfully:', avatarUrl);
+      } else {
+        console.error('Failed to get avatar URL after upload.');
+      }
+    } catch (error) {
+      console.error('Error updating avatar:', error);
+    }
+  };
 
   useEffect(() => {
     if (id) {
@@ -207,7 +229,7 @@ export const UserProfilePage = () => {
         </div>
 
         {/* Profile Picture - Centered (Bigger) */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-6 relative">
           {user.avatar_url ? (
             <img
               src={user.avatar_url}
@@ -218,6 +240,37 @@ export const UserProfilePage = () => {
             <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-primary text-white flex items-center justify-center font-bold text-3xl md:text-5xl border-4 border-white shadow-lg">
               {getInitials(user.username)}
             </div>
+          )}
+          {isOwnProfile && (
+            <>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleAvatarChange}
+                className="hidden"
+                accept="image/*"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-0 right-0 md:right-16 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
+                aria-label="Change profile picture"
+              >
+                <svg
+                  className="w-5 h-5 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
+                </svg>
+              </button>
+            </>
           )}
         </div>
 
