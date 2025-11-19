@@ -229,7 +229,7 @@ export const UserProfilePage = () => {
         </div>
 
         {/* Profile Picture - Centered (Bigger) */}
-        <div className="flex justify-center mb-6 relative">
+        <div className="flex flex-col items-center mb-6 relative"> {/* Changed to flex-col and items-center */}
           {user.avatar_url ? (
             <img
               src={user.avatar_url}
@@ -250,22 +250,23 @@ export const UserProfilePage = () => {
                 className="hidden"
                 accept="image/*"
               />
+
+              {/* ✨ Updated Edit Button */}
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="absolute bottom-0 right-0 md:right-16 bg-white p-2 rounded-full shadow-md border border-gray-200 hover:bg-gray-50 transition-colors"
                 aria-label="Change profile picture"
+                className="absolute bottom-2 right-[38%] md:right-[42%] bg-white w-8 h-8 md:w-10 md:h-10 rounded-full border border-gray-300 shadow-sm flex items-center justify-center hover:bg-gray-50 transition-all"
               >
                 <svg
-                  className="w-5 h-5 text-gray-600"
+                  className="w-4 h-4 md:w-5 md:h-5 text-gray-700"
                   fill="none"
                   stroke="currentColor"
+                  strokeWidth={2}
                   viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
                     d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
                   />
                 </svg>
