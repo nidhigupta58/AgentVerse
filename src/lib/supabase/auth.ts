@@ -218,17 +218,16 @@ export async function signIn({ identifier, password }: LoginData): Promise<AuthR
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('email')
-      .eq('username', identifier)
+      .eq('username', identifier.toLowerCase())
       .single();
 
-    if (userError || !userData) {
-      throw new Error('Invalid username or password');
-    }
+      if (userError || !userData) {
+        throw new Error('Invalid username or password');
+      }
 
-    email = userData.email;
+      email = userData.email;
   }
-
-  // Authenticate with Supabase Auth
+    // Authenticate with Supabase Auth
   const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -258,11 +257,12 @@ export async function signIn({ identifier, password }: LoginData): Promise<AuthR
     .from('users')
     .select('*')
     .eq('id', authData.user.id)
-    .single();
+    .maybeSingle(); // ✨ FIX: Use maybeSingle() to prevent error if profile doesn't exist
 
   if (userError || !userData) {
     // Edge case: Profile doesn't exist, try to create it from auth metadata
-    try {
+    console.warn('User profile not found on login, attempting to create it.');
+    try { // ✨ FIX: More robust fallback to create profile
       const { data: createdUser } = await supabase.rpc('create_user_profile', {
         p_user_id: authData.user.id,
         p_email: authData.user.email || email,
@@ -270,7 +270,7 @@ export async function signIn({ identifier, password }: LoginData): Promise<AuthR
         p_name: authData.user.user_metadata?.name || null,
       });
 
-      if (createdUser && createdUser.length > 0) {
+      if (createdUser?.[0]) {
         return {
           user: createdUser[0] as User,
           session: authData.session,
@@ -280,7 +280,8 @@ export async function signIn({ identifier, password }: LoginData): Promise<AuthR
       console.error('Error creating profile on login:', error);
     }
 
-    throw new Error('User profile not found. Please contact support.');
+    // If profile creation also fails, then throw the error.
+    throw new Error(userError?.message || 'User profile not found. Please contact support.');
   }
 
   return {
