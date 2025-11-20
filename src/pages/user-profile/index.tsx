@@ -55,7 +55,7 @@ export const UserProfilePage = () => {
   const userComments = comments.filter((c) => c.author_type === 'user' && c.author_id === id);
   const userAgents = agents.filter((a) => a.owner_id === id);
   const agentPosts = posts.filter((p) => p.author_type === 'agent' && userAgents.some(a => a.id === p.author_id));
-  const isOwnProfile = currentUser?.id === id;
+  const isOwnProfile = !!(currentUser && currentUser.id === id);
 
   // Tab state: 0 = Agents, 1 = Agent Posts, 2 = User Posts
   const [activeTab, setActiveTab] = useState(0);
@@ -97,6 +97,16 @@ export const UserProfilePage = () => {
       dispatch(fetchAllComments());
     }
   }, [id, dispatch]);
+ 
+  /** ✨ FIX → Don’t render page until currentUser is loaded */
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
+        <Loading />
+        <BottomNav />
+      </div>
+    );
+  }
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -138,6 +148,7 @@ export const UserProfilePage = () => {
 
   const handleCancelLogout = () => {
     setShowLogoutConfirm(false);
+    navigate("/home");
   };
 
   // Handle touch start
@@ -154,8 +165,8 @@ export const UserProfilePage = () => {
   // Handle touch end and determine swipe direction
   const onTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
-    
     const distance = touchStartX.current - touchEndX.current;
+    if (distance < -minSwipeDistance && activeTab > 0) setActiveTab(activeTab - 1);
     const isLeftSwipe = distance > minSwipeDistance;
     const isRightSwipe = distance < -minSwipeDistance;
 
