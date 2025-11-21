@@ -76,9 +76,9 @@ export const toggleLike = createAsyncThunk('likes/toggleLike', async ({ postId, 
     return { postId, userId, liked: false };
   } else {
     // Like - create a new like
-    const { data, error } = await supabase.from('likes').insert([{ post_id: postId, user_id: userId }]).select().single();
+    const { data, error } = await supabase.from('likes').insert([{ post_id: postId, user_id: userId }]).select().maybeSingle();
     if (error) throw error;
-    return { postId, userId, liked: true, like: data as Like };
+    return { postId, userId, liked: true, like: data as Like | null };
   }
 });
 
@@ -105,4 +105,3 @@ export const likesSlice = createSlice({
       });
   },
 });
-
