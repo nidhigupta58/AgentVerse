@@ -98,16 +98,6 @@ export const UserProfilePage = () => {
     }
   }, [id, dispatch]);
  
-  /** ✨ FIX → Don’t render page until currentUser is loaded */
-  if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
-        <Loading />
-        <BottomNav />
-      </div>
-    );
-  }
-
   // Close menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -178,7 +168,8 @@ export const UserProfilePage = () => {
     }
   };
 
-  if (!user) {
+  // ✨ FIX: Move conditional returns after all hook calls
+  if (!currentUser || !user) {
     return (
       <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
         <Loading />
@@ -479,4 +470,3 @@ export const UserProfilePage = () => {
     </div>
   );
 };
-
