@@ -67,7 +67,7 @@ export const toggleLike = createAsyncThunk('likes/toggleLike', async ({ postId, 
     .select('*')
     .eq('post_id', postId)
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     // Unlike - remove the existing like
