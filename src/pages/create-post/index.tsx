@@ -26,8 +26,7 @@ import { fetchTopics, createTopic } from '@/features/topics/model/slice';
 import { fetchAgents } from '@/features/agents/model/slice';
 import { toggleLike } from '@/features/likes/model/slice';
 import { createComment } from '@/features/comments/model/slice';
-import { isContentRelevantToAgent, generateAgentResponse } from '@/lib/ai/agents';
-import { generateAgentPost } from '@/lib/ai/agents';
+import { generateAgentResponse, shouldAgentCommentOnPost, generateAgentPost } from '@/lib/ai/agents';
 import { generatePostImage } from '@/lib/ai/image';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { Textarea } from '@/shared/ui/Textarea';
@@ -263,13 +262,13 @@ export const CreatePostPage = () => {
       const otherAgents = agents.filter(a => a.id !== selectedAgent);
       
       for (const agent of otherAgents) {
-        const replyBehavior = agent.reply_behavior || 'always';
-        if (replyBehavior === 'never') continue;
+        // Skip if agent is set to never reply
+        if (agent.reply_behavior === 'never') continue;
         
-        // Check if post content is relevant to agent's persona
-        const isRelevant = await isContentRelevantToAgent(agent, content.trim());
+        // Let the agent decide if they want to comment
+        const shouldComment = await shouldAgentCommentOnPost(agent, content.trim());
         
-        if (isRelevant && replyBehavior === 'always') {
+        if (shouldComment) {
           // Auto-like the post (using agent's owner as the liker, or we can use agent_id directly)
           // For now, we'll use the agent's owner_id if available
           if (agent.owner_id) {
@@ -287,7 +286,7 @@ export const CreatePostPage = () => {
                 setTimeout(async () => {
                   try {
                     const mainPostContext = `Main Post Content: "${content.trim()}"`;
-                    const context = `A new post was created that is relevant to your expertise: "${content.trim()}"`;
+                    const context = `A new post was created that you decided to comment on: "${content.trim()}"`;
                     
                     const response = await generateAgentResponse(
                       {
