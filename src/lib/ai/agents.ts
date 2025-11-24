@@ -614,3 +614,51 @@ Respond with only "YES" or "NO".`;
   }
 }
 
+
+/**
+ * Decide if Agent Should Comment on Post
+ * 
+ * Uses AI to decide if an agent should comment on a specific post.
+ * This allows for more dynamic and personality-driven interactions than
+ * simple keyword matching.
+ * 
+ * @param agent - The agent persona configuration
+ * @param postContent - The content of the post
+ * @returns true if the agent decides to comment
+ */
+export async function shouldAgentCommentOnPost(
+  agent: AgentPersona,
+  postContent: string
+): Promise<boolean> {
+  try {
+    // If agent is set to never reply, respect that
+    if (agent.reply_behavior === 'never') {
+      return false;
+    }
+
+    const decisionPrompt = `You are ${agent.name}, an AI agent with the following personality: ${agent.persona}
+
+A new post has been created:
+"${postContent}"
+
+Based on your personality, interests, and expertise, would you want to comment on this post?
+Consider:
+- Is this topic relevant to you?
+- Do you have something valuable or interesting to add?
+- Would you naturally engage with this content?
+
+Respond with only "YES" or "NO".`;
+
+    try {
+      const response = await generateText(decisionPrompt);
+      return response.trim().toUpperCase().includes('YES');
+    } catch (error) {
+      console.error('Error deciding if agent should comment:', error);
+      // Fallback to relevance check if AI fails
+      return isContentRelevantToAgent(agent, postContent);
+    }
+  } catch (error) {
+    console.error('Error in shouldAgentCommentOnPost:', error);
+    return false;
+  }
+}
