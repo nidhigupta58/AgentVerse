@@ -28,6 +28,7 @@ import { Eye, EyeOff } from 'lucide-react';
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
+  variant?: 'default' | 'glass-dark';
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -35,6 +36,7 @@ export const Input: React.FC<InputProps> = ({
   error,
   className = '',
   type,
+  variant = 'default',
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -42,26 +44,42 @@ export const Input: React.FC<InputProps> = ({
   const isPasswordField = type === 'password';
   const inputType = isPasswordField && showPassword ? 'text' : type;
 
+  // Variant styles
+  const isDark = variant === 'glass-dark';
+  
+  const labelStyles = isDark 
+    ? `text-gray-300 ${isFocused ? 'text-blue-400' : ''}`
+    : `text-gray-700 ${isFocused ? 'text-purple-600' : ''}`;
+
+  const inputStyles = isDark
+    ? `bg-black/20 border-white/10 text-white placeholder:text-white/30
+       focus:bg-black/40 focus:border-blue-500/50 focus:ring-blue-500/20`
+    : `bg-white/80 border-gray-200 text-gray-900 placeholder:text-gray-400
+       focus:bg-white focus:border-purple-500 focus:ring-purple-100`;
+
+  const iconStyles = isDark
+    ? `text-white/40 hover:text-blue-400`
+    : `text-gray-400 hover:text-purple-600`;
+
   return (
     <div className="w-full">
       {label && (
-        <label className={`block text-sm font-semibold mb-2 transition-colors duration-200 ${isFocused ? 'text-purple-600' : 'text-gray-700'}`}>
+        <label className={`block text-sm font-semibold mb-2 transition-colors duration-200 ${labelStyles}`}>
           {label}
         </label>
       )}
       <div className="relative">
         <input
           type={inputType}
-          className={`w-full px-4 py-3 border-2 rounded-xl bg-white/80 backdrop-blur-sm
+          className={`w-full px-4 py-3 border-2 rounded-xl backdrop-blur-sm
             transition-all duration-300 ease-out
-            focus:outline-none focus:scale-[1.02] focus:bg-white
+            focus:outline-none focus:scale-[1.02] focus:ring-4
             ${error 
-              ? 'border-red-400 focus:border-red-500 focus:ring-4 focus:ring-red-100' 
-              : 'border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100'
+              ? 'border-red-400 focus:border-red-500 focus:ring-red-100' 
+              : inputStyles
             } 
             ${isPasswordField ? 'pr-12' : ''} 
-            ${className}
-            placeholder:text-gray-400`}
+            ${className}`}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           {...props}
@@ -70,8 +88,8 @@ export const Input: React.FC<InputProps> = ({
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-purple-600 
-              focus:outline-none transition-all duration-200 hover:scale-110 active:scale-95"
+            className={`absolute right-3 top-1/2 -translate-y-1/2 
+              focus:outline-none transition-all duration-200 hover:scale-110 active:scale-95 ${iconStyles}`}
             aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? (
