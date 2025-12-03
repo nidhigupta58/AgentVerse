@@ -1,22 +1,20 @@
 /**
- * Login Page
+ * Login Page - Nebula Interface
  * 
- * Modern authentication page with stunning UI featuring:
- * - Animated gradient background
- * - Glassmorphism card effect
- * - Smooth animations and transitions
- * - Enhanced typography and spacing
- * - Responsive design
+ * A futuristic, immersive login experience featuring:
+ * - Fluid animated background
+ * - 3D interactive tilt effect
+ * - Holographic glassmorphism
+ * - Dark mode aesthetics
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
 import { signInUser } from '@/features/users/model/slice';
 import { Input } from '@/shared/ui/Input';
-import { Button } from '@/shared/ui/Button';
 import { BottomNav } from '@/widgets/bottom-nav';
 import { RootState } from '@/shared/lib/store';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Zap } from 'lucide-react';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
@@ -28,6 +26,32 @@ export const LoginPage = () => {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 3D Tilt State
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [rotation, setRotation] = useState({ x: 0, y: 0 });
+
+  // Handle 3D Tilt Effect
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    
+    const card = cardRef.current;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    
+    const rotateX = ((y - centerY) / centerY) * -5; // Max 5deg rotation
+    const rotateY = ((x - centerX) / centerX) * 5;
+
+    setRotation({ x: rotateX, y: rotateY });
+  };
+
+  const handleMouseLeave = () => {
+    setRotation({ x: 0, y: 0 });
+  };
 
   // Check for verification message from signup
   useEffect(() => {
@@ -72,36 +96,41 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="login-page-container">
-      {/* Animated Gradient Background */}
-      <div className="login-gradient-bg" />
+    <div className="nebula-container" onMouseMove={handleMouseMove} onMouseLeave={handleMouseLeave}>
+      {/* Fluid Background */}
+      <div className="nebula-bg">
+        <div className="blob blob-1"></div>
+        <div className="blob blob-2"></div>
+        <div className="blob blob-3"></div>
+        <div className="grid-overlay"></div>
+      </div>
       
-      {/* Floating Decorative Elements */}
-      <div className="login-floating-circle login-circle-1" />
-      <div className="login-floating-circle login-circle-2" />
-      <div className="login-floating-circle login-circle-3" />
-      
-      {/* Main Content */}
-      <div className="login-content-wrapper">
-        <div className="w-full max-w-md login-card-animate">
+      {/* 3D Tilt Card Container */}
+      <div className="content-wrapper">
+        <div 
+          ref={cardRef}
+          className="holographic-card"
+          style={{
+            transform: `perspective(1000px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
+          }}
+        >
           {/* Header Section */}
-          <div className="text-center mb-10">
+          <div className="text-center mb-8 relative z-10">
             <div className="flex items-center justify-center mb-4">
-              <Sparkles className="text-white mr-2" size={32} />
-              <h1 className="text-5xl font-bold text-white login-text-shadow">
+              <div className="icon-glow-container">
+                <Zap className="text-cyan-400" size={32} />
+              </div>
+              <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 ml-3 tracking-tight">
                 AgentVerse
               </h1>
             </div>
-            <h2 className="text-3xl font-semibold text-white mb-2 login-text-shadow">
+            <p className="text-blue-200/80 text-lg font-light tracking-wide">
               Welcome Back!
-            </h2>
-            <p className="text-white/90 text-lg login-text-shadow">
-              Sign in to continue your journey
             </p>
           </div>
 
-          {/* Glassmorphism Form Card */}
-          <form onSubmit={handleLogin} className="login-glass-card">
+          {/* Login Form */}
+          <form onSubmit={handleLogin} className="space-y-6 relative z-10">
             <div className="space-y-5">
               <Input
                 label="Username or Email"
@@ -109,6 +138,7 @@ export const LoginPage = () => {
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
                 placeholder="username or your@email.com"
+                variant="glass-dark"
                 required
               />
               <Input
@@ -117,264 +147,266 @@ export const LoginPage = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                variant="glass-dark"
                 required
               />
             </div>
 
             {error && (
-              <div className="login-error-message">
-                {error}
+              <div className="error-glass">
+                <span className="mr-2">⚠️</span> {error}
               </div>
             )}
             {info && (
-              <div className="login-info-message">
-                {info}
+              <div className="info-glass">
+                <span className="mr-2">ℹ️</span> {info}
               </div>
             )}
 
-            <Button 
+            <button 
               type="submit" 
-              className="login-submit-button" 
-              isLoading={isLoading}
+              className="cyber-button w-full" 
+              disabled={isLoading}
             >
-              {isLoading ? 'Signing In...' : 'Sign In'}
-            </Button>
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                {isLoading ? (
+                  <>
+                    <Sparkles className="animate-spin" size={18} />
+                    Logging in...
+                  </>
+                ) : (
+                  <>
+                    Login
+                    <Zap size={18} className="ml-1" />
+                  </>
+                )}
+              </span>
+              <div className="cyber-button-glitch"></div>
+            </button>
 
-            <p className="text-center text-sm text-gray-700 mt-6">
-              Don't have an account?{' '}
-              <Link to="/signup" className="login-signup-link">
-                Sign up here
-              </Link>
-            </p>
+            <div className="text-center mt-6">
+              <p className="text-sm text-blue-300/60">
+                New user?{' '}
+                <Link to="/signup" className="text-cyan-400 hover:text-cyan-300 transition-colors font-medium hover:underline decoration-cyan-400/50 underline-offset-4">
+                  Create account
+                </Link>
+              </p>
+            </div>
           </form>
+          
+          {/* Card Shine Effect */}
+          <div 
+            className="card-shine"
+            style={{
+              background: `radial-gradient(circle at ${50 - rotation.y * 3}% ${50 - rotation.x * 3}%, rgba(255,255,255,0.1) 0%, transparent 50%)`
+            }}
+          />
         </div>
       </div>
       
-      <BottomNav />
+      <div className="fixed bottom-0 w-full z-50">
+        <BottomNav />
+      </div>
       
       <style>{`
-        .login-page-container {
+        .nebula-container {
           min-height: 100vh;
           position: relative;
           overflow: hidden;
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 1rem 1rem 4rem 1rem;
+          background: #050510;
+          padding-bottom: 4rem;
         }
 
-        .login-gradient-bg {
+        /* Fluid Background Animation */
+        .nebula-bg {
           position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(-45deg, #667eea, #764ba2, #f093fb, #4facfe);
-          background-size: 400% 400%;
-          animation: gradientShift 15s ease infinite;
+          inset: 0;
+          overflow: hidden;
           z-index: 0;
         }
 
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-
-        .login-floating-circle {
+        .blob {
           position: absolute;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-          animation: float 20s ease-in-out infinite;
-          z-index: 1;
+          filter: blur(80px);
+          opacity: 0.6;
+          animation: floatBlob 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .login-circle-1 {
-          width: 300px;
-          height: 300px;
-          top: -150px;
-          right: -150px;
+        .blob-1 {
+          top: -10%;
+          left: -10%;
+          width: 50vw;
+          height: 50vw;
+          background: #4f46e5;
           animation-delay: 0s;
         }
 
-        .login-circle-2 {
-          width: 200px;
-          height: 200px;
-          bottom: -100px;
-          left: -100px;
-          animation-delay: 5s;
+        .blob-2 {
+          bottom: -10%;
+          right: -10%;
+          width: 60vw;
+          height: 60vw;
+          background: #7c3aed;
+          animation-delay: -5s;
         }
 
-        .login-circle-3 {
-          width: 150px;
-          height: 150px;
-          top: 50%;
-          left: -75px;
-          animation-delay: 10s;
+        .blob-3 {
+          top: 40%;
+          left: 40%;
+          width: 40vw;
+          height: 40vw;
+          background: #2563eb;
+          animation-delay: -10s;
         }
 
-        @keyframes float {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          33% { transform: translate(30px, -30px) rotate(120deg); }
-          66% { transform: translate(-20px, 20px) rotate(240deg); }
+        .grid-overlay {
+          position: absolute;
+          inset: 0;
+          background-image: 
+            linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+          background-size: 50px 50px;
+          mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
         }
 
-        .login-content-wrapper {
-          position: relative;
+        @keyframes floatBlob {
+          0% { transform: translate(0, 0) scale(1); }
+          100% { transform: translate(20px, 20px) scale(1.1); }
+        }
+
+        /* Holographic Card */
+        .content-wrapper {
           z-index: 10;
+          padding: 20px;
           width: 100%;
-          max-width: 28rem;
-          animation: fadeInUp 0.8s ease-out;
+          max-width: 480px;
         }
 
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(30px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .login-card-animate {
-          animation: scaleIn 0.5s ease-out 0.2s both;
-        }
-
-        @keyframes scaleIn {
-          from {
-            opacity: 0;
-            transform: scale(0.9);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        .login-text-shadow {
-          text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .login-glass-card {
-          background: rgba(255, 255, 255, 0.95);
+        .holographic-card {
+          background: rgba(10, 10, 25, 0.6);
           backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
           border-radius: 24px;
-          padding: 2.5rem;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
-                      0 0 0 1px rgba(255, 255, 255, 0.5) inset;
-          border: 1px solid rgba(255, 255, 255, 0.3);
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
+          padding: 3rem;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 
+            0 25px 50px -12px rgba(0, 0, 0, 0.5),
+            0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+          transition: transform 0.1s ease-out;
+          transform-style: preserve-3d;
         }
 
-        .login-glass-card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 25px 70px rgba(0, 0, 0, 0.35),
-                      0 0 0 1px rgba(255, 255, 255, 0.5) inset;
+        .card-shine {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 20;
+          mix-blend-mode: overlay;
         }
 
-        .login-submit-button {
-          width: 100%;
-          margin-top: 2rem;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        .icon-glow-container {
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: rgba(34, 211, 238, 0.1);
+          border: 1px solid rgba(34, 211, 238, 0.2);
+          box-shadow: 0 0 20px rgba(34, 211, 238, 0.2);
+        }
+
+        /* Cyber Button */
+        .cyber-button {
+          position: relative;
+          background: linear-gradient(90deg, #2563eb, #7c3aed);
           color: white;
-          padding: 0.875rem 1.5rem;
+          padding: 1rem;
+          border-radius: 12px;
           font-weight: 600;
           font-size: 1rem;
-          border-radius: 12px;
+          letter-spacing: 0.5px;
           border: none;
-          cursor: pointer;
+          overflow: hidden;
           transition: all 0.3s ease;
-          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+          box-shadow: 0 0 20px rgba(79, 70, 229, 0.4);
         }
 
-        .login-submit-button:hover:not(:disabled) {
+        .cyber-button::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+          transition: 0.5s;
+        }
+
+        .cyber-button:hover {
           transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-          background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+          box-shadow: 0 0 30px rgba(79, 70, 229, 0.6);
         }
 
-        .login-submit-button:active:not(:disabled) {
-          transform: translateY(0);
+        .cyber-button:hover::before {
+          left: 100%;
         }
 
-        .login-error-message {
-          background: linear-gradient(135deg, #ff6b6b, #ee5a6f);
-          color: white;
-          padding: 1rem 1.25rem;
+        .cyber-button:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        /* Messages */
+        .error-glass {
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          color: #fca5a5;
+          padding: 0.75rem 1rem;
           border-radius: 12px;
-          margin-top: 1.5rem;
           font-size: 0.875rem;
-          font-weight: 500;
-          box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+          display: flex;
+          align-items: center;
           animation: slideIn 0.3s ease-out;
         }
 
-        .login-info-message {
-          background: linear-gradient(135deg, #4facfe, #00f2fe);
-          color: white;
-          padding: 1rem 1.25rem;
+        .info-glass {
+          background: rgba(59, 130, 246, 0.1);
+          border: 1px solid rgba(59, 130, 246, 0.2);
+          color: #93c5fd;
+          padding: 0.75rem 1rem;
           border-radius: 12px;
-          margin-top: 1.5rem;
           font-size: 0.875rem;
-          font-weight: 500;
-          box-shadow: 0 4px 12px rgba(79, 172, 254, 0.3);
+          display: flex;
+          align-items: center;
           animation: slideIn 0.3s ease-out;
         }
 
         @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateX(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
-        .login-signup-link {
-          color: #667eea;
-          font-weight: 600;
-          text-decoration: none;
-          transition: all 0.2s ease;
-          position: relative;
-        }
-
-        .login-signup-link:hover {
-          color: #764ba2;
-        }
-
-        .login-signup-link::after {
-          content: '';
-          position: absolute;
-          width: 0;
-          height: 2px;
-          bottom: -2px;
-          left: 0;
-          background: linear-gradient(90deg, #667eea, #764ba2);
-          transition: width 0.3s ease;
-        }
-
-        .login-signup-link:hover::after {
-          width: 100%;
-        }
-
-        /* Responsive Design */
+        /* Mobile Optimization */
         @media (max-width: 640px) {
-          .login-glass-card {
+          .holographic-card {
             padding: 2rem 1.5rem;
-            border-radius: 20px;
+            transform: none !important; /* Disable 3D tilt on mobile */
           }
           
-          h1 {
-            font-size: 2.5rem;
+          .nebula-bg {
+            /* Simplify background on mobile */
+            background: linear-gradient(to bottom right, #0f172a, #1e1b4b);
           }
           
-          h2 {
-            font-size: 2rem;
+          .blob {
+            display: none;
           }
         }
       `}</style>
