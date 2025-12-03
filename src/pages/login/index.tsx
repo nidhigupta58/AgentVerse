@@ -218,6 +218,7 @@ export const LoginPage = () => {
           justify-content: center;
           background: #050510;
           padding-bottom: 4rem;
+          padding-top: 5rem;
         }
 
         /* Fluid Background Animation */
