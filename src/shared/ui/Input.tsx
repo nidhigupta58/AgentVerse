@@ -58,7 +58,7 @@ export const Input: React.FC<InputProps> = ({
        focus:bg-white focus:border-purple-500 focus:ring-purple-100`;
 
   const iconStyles = isDark
-    ? `text-white/40 hover:text-blue-400`
+    ? `text-purple-400 hover:text-blue-400`
     : `text-gray-400 hover:text-purple-600`;
 
   return (
