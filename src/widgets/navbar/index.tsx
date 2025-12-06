@@ -53,50 +53,50 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white shadow-sm fixed top-0 left-0 right-0 z-50 hidden md:block">
+    <nav className="bg-white/70 backdrop-blur-lg border-b border-white/20 fixed top-0 left-0 right-0 z-50 hidden md:block animate-slideDown transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-8">
-            <Link to="/home" className="text-[28px] font-bold text-primary hover:opacity-80 transition-opacity">
+            <Link to="/home" className="text-[28px] font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primaryDark hover:opacity-80 transition-opacity">
               AgentVerse
             </Link>
             <div className="flex space-x-1">
               <Link 
                 to="/home" 
-                className={`px-4 py-2 rounded-md text-[14px] font-medium transition-colors ${
+                className={`px-4 py-2 rounded-full text-[14px] font-medium transition-all duration-300 hover:-translate-y-0.5 ${
                   isActive('/home') 
-                    ? 'text-primary bg-primary/10' 
-                    : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                    ? 'text-primary bg-primary/10 shadow-sm' 
+                    : 'text-gray-700 hover:text-primary hover:bg-primary/5'
                 }`}
               >
                 Home
               </Link>
               <Link 
                 to="/explore" 
-                className={`px-4 py-2 rounded-md text-[14px] font-medium transition-colors ${
+                className={`px-4 py-2 rounded-full text-[14px] font-medium transition-all duration-300 hover:-translate-y-0.5 ${
                   isActive('/explore') 
-                    ? 'text-primary bg-primary/10' 
-                    : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                    ? 'text-primary bg-primary/10 shadow-sm' 
+                    : 'text-gray-700 hover:text-primary hover:bg-primary/5'
                 }`}
               >
                 Explore
               </Link>
               <Link 
                 to="/forums" 
-                className={`px-4 py-2 rounded-md text-[14px] font-medium transition-colors ${
+                className={`px-4 py-2 rounded-full text-[14px] font-medium transition-all duration-300 hover:-translate-y-0.5 ${
                   isActive('/forums') || isActive('/forum') 
-                    ? 'text-primary bg-primary/10' 
-                    : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                    ? 'text-primary bg-primary/10 shadow-sm' 
+                    : 'text-gray-700 hover:text-primary hover:bg-primary/5'
                 }`}
               >
                 Forums
               </Link>
               <Link 
                 to="/topics" 
-                className={`px-4 py-2 rounded-md text-[14px] font-medium transition-colors ${
+                className={`px-4 py-2 rounded-full text-[14px] font-medium transition-all duration-300 hover:-translate-y-0.5 ${
                   isActive('/topics') || isActive('/topic') 
-                    ? 'text-primary bg-primary/10' 
-                    : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                    ? 'text-primary bg-primary/10 shadow-sm' 
+                    : 'text-gray-700 hover:text-primary hover:bg-primary/5'
                 }`}
               >
                 Topics
@@ -108,35 +108,35 @@ export const Navbar = () => {
               <>
                 <Link 
                   to={`/user/${currentUser.id}`} 
-                  className={`text-[14px] font-medium transition-colors px-3 py-2 rounded-md ${
+                  className={`text-[14px] font-medium transition-all duration-300 hover:-translate-y-0.5 px-3 py-2 rounded-full ${
                     isActive(`/user/${currentUser.id}`)
-                      ? 'text-primary bg-primary/10'
-                      : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                      ? 'text-primary bg-primary/10 shadow-sm'
+                      : 'text-gray-700 hover:text-primary hover:bg-primary/5'
                   }`}
                 >
                   {currentUser.username}
                 </Link>
                 <Link 
                   to="/settings" 
-                  className={`text-[14px] font-medium transition-colors px-3 py-2 rounded-md ${
+                  className={`text-[14px] font-medium transition-all duration-300 hover:-translate-y-0.5 px-3 py-2 rounded-full ${
                     isActive('/settings')
-                      ? 'text-primary bg-primary/10'
-                      : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                      ? 'text-primary bg-primary/10 shadow-sm'
+                      : 'text-gray-700 hover:text-primary hover:bg-primary/5'
                   }`}
                 >
                   Settings
                 </Link>
-                <Button variant="outline" size="sm" onClick={handleLogout}>
+                <Button variant="outline" size="sm" onClick={handleLogout} className="rounded-full hover:shadow-md transition-all duration-300">
                   Logout
                 </Button>
               </>
             ) : (
               <Link 
                 to="/login" 
-                className={`text-[14px] font-medium transition-colors px-3 py-2 rounded-md ${
+                className={`text-[14px] font-medium transition-all duration-300 hover:-translate-y-0.5 px-6 py-2 rounded-full ${
                   isActive('/login') || isActive('/signup')
-                    ? 'text-primary bg-primary/10'
-                    : 'text-gray-700 hover:text-primary hover:bg-gray-50'
+                    ? 'text-primary bg-primary/10 shadow-sm'
+                    : 'text-gray-700 hover:text-primary hover:bg-primary/5'
                 }`}
               >
                 Login
