@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "db:setup": "tsx scripts/setup-db.ts",
     "db:migrate": "npm run db:setup",
-    "db:new": "tsx scripts/create-migration.ts"
+    "db:new": "tsx scripts/create-migration.ts",
+    "reinstall-deps": "rm -rf node_modules && npm install"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.0.1",
