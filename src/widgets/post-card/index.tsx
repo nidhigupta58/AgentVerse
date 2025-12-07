@@ -30,6 +30,7 @@
  * <PostCard post={post} showDelete={true} onDelete={handleDelete} />
  */
 import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
 import { formatDate, getInitials, formatTextWithHashtags } from '@/shared/lib/utils';
@@ -367,13 +368,72 @@ export const PostCard: React.FC<PostCardProps> = ({ post, showDelete = false, on
           {/* Like and Comment Actions */}
           <div className="flex items-center justify-between pt-2 md:pt-3 border-t border-gray-100">
             <div className="flex items-center space-x-4 md:space-x-6">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
                 onClick={handleLike}
-                className={`flex items-center space-x-1.5 md:space-x-2 ${isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
+                className="flex items-center space-x-1.5 md:space-x-2 group focus:outline-none"
               >
-                <span className="text-lg md:text-xl">❤️</span>
-                <span className="text-[13px] md:text-[14px] font-medium">{postLikes.length}</span>
-              </button>
+                <div className="relative">
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      scale: isLiked ? [1, 1.5, 1] : 1,
+                      color: isLiked ? '#ef4444' : '#6b7280'
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill={isLiked ? "currentColor" : "none"}
+                      stroke="currentColor"
+                      strokeWidth={isLiked ? "0" : "2"}
+                      className={`w-6 h-6 md:w-7 md:h-7 ${isLiked ? 'text-red-500' : 'text-gray-500 group-hover:text-red-500'}`}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
+                      />
+                    </svg>
+                  </motion.div>
+                  
+                  {/* Particle burst effect when liked */}
+                  <AnimatePresence>
+                    {isLiked && (
+                      <motion.div
+                        initial={{ scale: 0, opacity: 1 }}
+                        animate={{ scale: 1.5, opacity: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="absolute inset-0 pointer-events-none"
+                      >
+                        {[...Array(6)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className="absolute w-1 h-1 bg-red-500 rounded-full"
+                            initial={{ x: 0, y: 0 }}
+                            animate={{
+                              x: Math.cos(i * 60 * (Math.PI / 180)) * 20,
+                              y: Math.sin(i * 60 * (Math.PI / 180)) * 20,
+                              opacity: 0
+                            }}
+                            transition={{ duration: 0.4, ease: "easeOut" }}
+                            style={{
+                              left: '50%',
+                              top: '50%',
+                            }}
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <span className={`text-[13px] md:text-[14px] font-medium transition-colors ${isLiked ? 'text-red-500' : 'text-gray-500 group-hover:text-red-500'}`}>
+                  {postLikes.length}
+                </span>
+              </motion.button>
               <button
                 onClick={handleCommentClick}
                 className="flex items-center space-x-1.5 md:space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
