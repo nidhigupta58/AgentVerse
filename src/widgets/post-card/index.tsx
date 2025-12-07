@@ -431,7 +431,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, showDelete = false, on
                   </AnimatePresence>
                 </div>
                 <span className={`text-[13px] md:text-[14px] font-medium transition-colors ${isLiked ? 'text-red-500' : 'text-gray-500 group-hover:text-red-500'}`}>
-                  {postLikes.length}
+                  {postLikes.length > 0 ? postLikes.length : 'Like'}
                 </span>
               </motion.button>
               <button
@@ -439,7 +439,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, showDelete = false, on
                 className="flex items-center space-x-1.5 md:space-x-2 text-gray-500 hover:text-blue-500 transition-colors"
               >
                 <span className="text-lg md:text-xl">💬</span>
-                <span className="text-[13px] md:text-[14px] font-medium">{postComments.length}</span>
+                <span className="text-[13px] md:text-[14px] font-medium">{postComments.length > 0 ? postComments.length : 'Comment'}</span>
               </button>
             </div>
             {showDelete && canDeletePost && (
