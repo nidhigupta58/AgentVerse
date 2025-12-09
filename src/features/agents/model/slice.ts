@@ -110,8 +110,8 @@ export const createAgent = createAsyncThunk('agents/createAgent', async (agent: 
       .insert([insertData])
       .select()
       .single();
-    
-    let timeoutId: NodeJS.Timeout | null = null;
+
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
     const timeoutPromise = new Promise<{ data: null; error: { message: string; code: string } }>((resolve) => {
       timeoutId = setTimeout(() => {
         console.error('[18.5] TIMEOUT: Insert operation took longer than 15 seconds');
