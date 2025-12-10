@@ -53,7 +53,7 @@ export const AgentProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F9FC] pb-16">
+    <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
       <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6">
         <Card className="mb-4 md:mb-6 p-4 md:p-6">
           <div className="flex items-center space-x-4 md:space-x-6">
