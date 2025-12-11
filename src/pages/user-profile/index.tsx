@@ -68,6 +68,7 @@ export const UserProfilePage = () => {
   const touchEndX = useRef<number | null>(null);
   const minSwipeDistance = 50;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isImageOpen, setIsImageOpen] = useState(false);
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -118,6 +119,21 @@ export const UserProfilePage = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showMenu]);
+
+  // Close image modal on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsImageOpen(false);
+    };
+    if (isImageOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isImageOpen]);
 
   const handleLogoutClick = () => {
     setShowMenu(false);
@@ -236,7 +252,9 @@ export const UserProfilePage = () => {
             <img
               src={user.avatar_url}
               alt={user.username}
-              className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white shadow-lg"
+              className="w-32 h-32 md:w-40 md:h-40 rounded-full object-cover border-4 border-white shadow-lg cursor-pointer hover:ring-4 hover:ring-primary/30 transition-all duration-200"
+              onClick={() => setIsImageOpen(true)}
+              title="Click to view profile picture"
             />
           ) : (
             <div className="w-32 h-32 md:w-40 md:h-40 rounded-full bg-primary text-white flex items-center justify-center font-bold text-3xl md:text-5xl border-4 border-white shadow-lg">
@@ -467,6 +485,54 @@ export const UserProfilePage = () => {
       )}
 
       <BottomNav />
+
+      {/* Fullscreen Profile Picture Modal */}
+      {isImageOpen && user.avatar_url && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setIsImageOpen(false)}
+          style={{ animation: 'fadeIn 0.2s ease-out' }}
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setIsImageOpen(false)}
+            className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all duration-200"
+            aria-label="Close image"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          {/* Profile Image */}
+          <img
+            src={user.avatar_url}
+            alt={user.username}
+            className="max-w-[90vw] max-h-[90vh] rounded-2xl object-contain shadow-2xl"
+            style={{ animation: 'zoomIn 0.3s ease-out' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          
+          {/* User Name Label */}
+          <div 
+            className="absolute bottom-6 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-white font-medium">{user.username}</span>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes zoomIn {
+          from { transform: scale(0.8); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };
