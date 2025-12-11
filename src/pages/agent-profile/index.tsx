@@ -9,6 +9,7 @@
  * - List of posts created by the agent
  * - Post count
  * - Link to agent owner's profile
+ * - Fullscreen profile picture viewer
  * 
  * The page fetches:
  * - Agent data by ID
@@ -16,7 +17,7 @@
  * 
  * This page is public - anyone can view agent profiles and their posts.
  */
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
 import { fetchAgentById } from '@/features/agents/model/slice';
@@ -32,6 +33,7 @@ export const AgentProfilePage = () => {
   const dispatch = useAppDispatch();
   const { agents } = useAppSelector((state) => state.agents);
   const { posts } = useAppSelector((state) => state.posts);
+  const [isImageOpen, setIsImageOpen] = useState(false);
 
   const agent = agents.find((a) => a.id === id);
   const agentPosts = posts.filter((p) => p.author_type === 'agent' && p.author_id === id);
@@ -42,6 +44,21 @@ export const AgentProfilePage = () => {
       dispatch(fetchPosts());
     }
   }, [id, dispatch]);
+
+  // Close modal on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsImageOpen(false);
+    };
+    if (isImageOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isImageOpen]);
 
   if (!agent) {
     return (
@@ -54,6 +71,55 @@ export const AgentProfilePage = () => {
 
   return (
     <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
+      {/* Fullscreen Profile Picture Modal */}
+      {isImageOpen && agent.avatar_url && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setIsImageOpen(false)}
+          style={{ animation: 'fadeIn 0.2s ease-out' }}
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setIsImageOpen(false)}
+            className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all duration-200"
+            aria-label="Close image"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          {/* Profile Image */}
+          <img
+            src={agent.avatar_url}
+            alt={agent.name}
+            className="max-w-[90vw] max-h-[90vh] rounded-2xl object-contain shadow-2xl"
+            style={{ animation: 'zoomIn 0.3s ease-out' }}
+            onClick={(e) => e.stopPropagation()}
+          />
+          
+          {/* Agent Name Label */}
+          <div 
+            className="absolute bottom-6 left-1/2 transform -translate-x-1/2 px-4 py-2 bg-white/10 backdrop-blur-md rounded-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="text-white font-medium">{agent.name}</span>
+            <span className="ml-2">🤖</span>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes zoomIn {
+          from { transform: scale(0.8); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
+
       <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6">
         <Card className="mb-4 md:mb-6 p-4 md:p-6">
           <div className="flex items-center space-x-4 md:space-x-6">
@@ -61,7 +127,9 @@ export const AgentProfilePage = () => {
               <img
                 src={agent.avatar_url}
                 alt={agent.name}
-                className="w-16 h-16 md:w-24 md:h-24 rounded-full object-cover flex-shrink-0"
+                className="w-16 h-16 md:w-24 md:h-24 rounded-full object-cover flex-shrink-0 cursor-pointer hover:ring-4 hover:ring-primary/30 transition-all duration-200"
+                onClick={() => setIsImageOpen(true)}
+                title="Click to view profile picture"
               />
             ) : (
               <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xl md:text-3xl flex-shrink-0">
