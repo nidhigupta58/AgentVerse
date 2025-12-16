@@ -5,49 +5,58 @@
  * This is the detailed view of a discussion thread within a forum.
  * 
  * Features:
- * - Thread information (title, author, creation date)
- * - List of all messages in the thread (chronological order)
- * - Post new message (protected - requires authentication)
- * - Post message as AI agent (optional)
- * - AI agent mentions (detects @mentions and generates agent responses)
- * - Message author information (user or agent)
- * - Back link to forum threads list
- * - Loading state while fetching data
- * 
- * AI Integration:
- * - Detects when agents are mentioned in messages
- * - Generates AI agent responses when relevant
- * - Agents can automatically reply if content is relevant to their persona
- * - Users can post messages as their AI agents
- * 
- * Protected route - requires authentication to post messages,
- * but anyone can view threads and messages.
+ * - Modern chat-like interface for messages
+ * - Distinct styling for user vs agent messages
+ * - Enhanced reply form with agent selection
+ * - Smooth message animations
+ * - Auto-scroll to new messages
+ * - Animated background blobs
  */
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
 import { fetchThreadsByForumId, fetchMessagesByThreadId, createThreadMessage } from '@/features/forums/model/slice';
 import { fetchAgents } from '@/features/agents/model/slice';
 import { fetchUsers } from '@/features/users/model/slice';
 import { detectMentions, generateAgentResponse, isContentRelevantToAgent, findSimilarAgents, type AgentMentionInfo } from '@/lib/ai/agents';
 import { BottomNav } from '@/widgets/bottom-nav';
-import { Card } from '@/shared/ui/Card';
 import { Button } from '@/shared/ui/Button';
 import { Textarea } from '@/shared/ui/Textarea';
-import { Loading } from '@/shared/ui/Loading';
 import { formatDate, getInitials } from '@/shared/lib/utils';
+
+// Loading skeleton
+const LoadingSkeleton = () => (
+  <div className="space-y-6 animate-pulse p-4">
+    {[1, 2, 3].map((i) => (
+      <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
+        <div className={`w-3/4 rounded-2xl p-4 ${i % 2 === 0 ? 'bg-indigo-50' : 'bg-white'}`}>
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="w-8 h-8 bg-gray-200 rounded-full" />
+            <div className="h-4 bg-gray-200 rounded w-24" />
+          </div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-full" />
+            <div className="h-4 bg-gray-200 rounded w-5/6" />
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 export const ForumThreadPage = () => {
   const { forumId, threadId } = useParams<{ forumId: string; threadId: string }>();
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.users.currentUser);
-  const { threads, messages } = useAppSelector((state) => state.forums);
+  const { threads, messages, loading } = useAppSelector((state) => state.forums);
   const users = useAppSelector((state) => state.users.users);
   const agents = useAppSelector((state) => state.agents.agents);
   const [messageContent, setMessageContent] = useState('');
   const [selectedAgent, setSelectedAgent] = useState('');
   const [useAgent, setUseAgent] = useState(false);
   const [isGeneratingAgentMessage, setIsGeneratingAgentMessage] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Filter agents to only show user's own agents
   const userAgents = agents.filter((agent) => agent.owner_id === currentUser?.id);
@@ -56,17 +65,18 @@ export const ForumThreadPage = () => {
   const threadMessages = messages.filter((m) => m.thread_id === threadId);
 
   useEffect(() => {
-    if (forumId) {
-      dispatch(fetchThreadsByForumId(forumId));
-    }
-    if (threadId) {
-      dispatch(fetchMessagesByThreadId(threadId));
-    }
+    if (forumId) dispatch(fetchThreadsByForumId(forumId));
+    if (threadId) dispatch(fetchMessagesByThreadId(threadId));
     dispatch(fetchAgents());
     dispatch(fetchUsers());
   }, [forumId, threadId, dispatch]);
 
-  // Auto-generate agent message when agent is selected
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [threadMessages.length]);
+
+  // Auto-generate agent message
   useEffect(() => {
     const generateAgentMessage = async () => {
       if (!useAgent || !selectedAgent || !thread || isGeneratingAgentMessage) return;
@@ -75,16 +85,14 @@ export const ForumThreadPage = () => {
       if (!agent) return;
 
       setIsGeneratingAgentMessage(true);
-      
       try {
-        // Build context with thread title and last 10 messages
         const mainPostContext = `Main Post/Thread Title: "${thread.title}"`;
         const last10Messages = threadMessages.slice(-10).map(m => m.content);
         const conversationHistory = last10Messages.length > 0 
           ? `Recent discussion messages:\n${last10Messages.join('\n')}`
           : '';
         
-        const context = `${mainPostContext}\n\n${conversationHistory}\n\nGenerate a response to this forum discussion thread. Consider the thread title and the recent discussion messages.`;
+        const context = `${mainPostContext}\n\n${conversationHistory}\n\nGenerate a response to this forum discussion thread.`;
         
         const response = await generateAgentResponse(
           {
@@ -101,7 +109,7 @@ export const ForumThreadPage = () => {
           },
           context,
           last10Messages,
-          true // Enable web search
+          true
         );
         
         setMessageContent(response);
@@ -114,23 +122,11 @@ export const ForumThreadPage = () => {
     };
 
     generateAgentMessage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAgent, useAgent]);
-
-  if (!thread) {
-    return (
-      <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
-        <Loading />
-        <BottomNav />
-      </div>
-    );
-  }
 
   const handleSubmitMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !threadId || !messageContent.trim()) return;
-
-    // If using agent, validate agent selection
     if (useAgent && !selectedAgent) {
       alert('Please select an agent to send the message');
       return;
@@ -145,59 +141,43 @@ export const ForumThreadPage = () => {
           content: messageContent.trim(),
         })
       ).unwrap();
+      
       const submittedContent = messageContent.trim();
       setMessageContent('');
       dispatch(fetchMessagesByThreadId(threadId));
       
-      // Prepare agent mention info with usernames
-      const agentMentionInfo: AgentMentionInfo[] = agents.map((agent) => {
-        const owner = agent.owner_id ? users.find((u) => u.id === agent.owner_id) : null;
-        return {
-          agentId: agent.id,
-          agentName: agent.name,
-          agentUsername: agent.username,
-          ownerUsername: owner?.username || null,
-        };
-      });
+      // Handle agent mentions and auto-replies
+      const agentMentionInfo: AgentMentionInfo[] = agents.map((agent) => ({
+        agentId: agent.id,
+        agentName: agent.name,
+        agentUsername: agent.username,
+        ownerUsername: agent.owner_id ? users.find(u => u.id === agent.owner_id)?.username || null : null,
+      }));
       
-      // Check for agent mentions
       const mentionedAgentIds = detectMentions(submittedContent, agentMentionInfo);
-      
-      // Also check for content relevance (agents auto-reply if content is related to their expertise)
       const relevantAgents: string[] = [];
+      
       for (const agent of agents) {
-        if (mentionedAgentIds.includes(agent.id)) continue; // Already mentioned
-        
+        if (mentionedAgentIds.includes(agent.id)) continue;
         const replyBehavior = agent.reply_behavior || 'always';
         if (replyBehavior === 'never') continue;
         
-        // Check if content is relevant to agent's persona
         const isRelevant = await isContentRelevantToAgent(agent, submittedContent);
-        if (isRelevant && replyBehavior === 'always') {
-          relevantAgents.push(agent.id);
-        }
+        if (isRelevant && replyBehavior === 'always') relevantAgents.push(agent.id);
       }
       
-      // Combine mentioned and relevant agents
       const agentsToReply = [...new Set([...mentionedAgentIds, ...relevantAgents])];
       
-      // Trigger auto-replies for each agent
       for (const agentId of agentsToReply) {
         const agent = agents.find((a) => a.id === agentId);
         if (!agent) continue;
         
         const replyBehavior = agent.reply_behavior || 'always';
-        if (replyBehavior === 'never') continue;
+        if (replyBehavior === 'selective' && !mentionedAgentIds.includes(agentId)) continue;
         
-        // For selective mode, only reply to direct @mentions
-        if (replyBehavior === 'selective' && !mentionedAgentIds.includes(agentId)) {
-          continue;
-        }
-        
-        // Auto-reply from the agent
         setTimeout(async () => {
           try {
-            const mainPostContext = `Main Post/Thread Title: "${thread.title}"`;
+            const mainPostContext = `Main Post/Thread Title: "${thread?.title}"`;
             const context = mentionedAgentIds.includes(agentId)
               ? `${mainPostContext}\n\nSomeone mentioned you in a forum message: "${submittedContent}"`
               : `${mainPostContext}\n\nA forum discussion about something related to your expertise: "${submittedContent}"`;
@@ -216,34 +196,27 @@ export const ForumThreadPage = () => {
                 post_frequency: agent.post_frequency,
               },
               context,
-              threadMessages.slice(-10).map(m => m.content), // Last 10 messages for context
-              true // Enable web search
+              threadMessages.slice(-10).map(m => m.content),
+              true
             );
             
-            // Find similar agents that might want to discuss together
-            const similarAgents = await findSimilarAgents(agent, agents, thread.title);
-            
-            // Add mentions to similar agents if found (but not already mentioned)
+            const similarAgents = await findSimilarAgents(agent, agents, thread?.title || '');
             let messageContent = response;
+            
             if (similarAgents.length > 0) {
               const mentionedAgents = similarAgents
-                .filter(id => !mentionedAgentIds.includes(id) && id !== agentId) // Don't mention already mentioned or self
-                .slice(0, 2); // Limit to 2 mentions
+                .filter(id => !mentionedAgentIds.includes(id) && id !== agentId)
+                .slice(0, 2);
               
               if (mentionedAgents.length > 0) {
                 const mentions = mentionedAgents.map(id => {
                   const mentionedAgent = agents.find(a => a.id === id);
-                  if (mentionedAgent?.username) {
-                    return `@${mentionedAgent.username}`;
-                  } else if (mentionedAgent?.name) {
-                    return `@${mentionedAgent.name}`;
-                  }
+                  if (mentionedAgent?.username) return `@${mentionedAgent.username}`;
+                  if (mentionedAgent?.name) return `@${mentionedAgent.name}`;
                   return '';
                 }).filter(Boolean).join(' ');
                 
-                if (mentions) {
-                  messageContent = `${mentions} ${response}`;
-                }
+                if (mentions) messageContent = `${mentions} ${response}`;
               }
             }
             
@@ -259,7 +232,7 @@ export const ForumThreadPage = () => {
           } catch (error) {
             console.error('Failed to generate agent reply:', error);
           }
-        }, 2000 + Math.random() * 2000); // Random delay between 2-4 seconds to make it feel natural
+        }, 2000 + Math.random() * 2000);
       }
     } catch (error) {
       console.error('Failed to create message:', error);
@@ -267,22 +240,148 @@ export const ForumThreadPage = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-[#F7F9FC] pb-16">
-      <div className="max-w-4xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
-        <Link to="/forums" className="text-primary hover:underline mb-4 md:mb-6 inline-block text-[13px] md:text-[14px] font-medium transition-colors">
-          ← Back to Forums
-        </Link>
-        <Card className="mb-4 md:mb-6 p-4 md:p-6">
-          <h1 className="text-[20px] md:text-2xl font-bold text-text mb-3 md:mb-4">{thread.title}</h1>
-        </Card>
+  if (!thread) {
+    return (
+      <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16">
+        <div className="max-w-4xl mx-auto px-6 py-6">
+          <LoadingSkeleton />
+        </div>
+        <BottomNav />
+      </div>
+    );
+  }
 
-        <Card className="mb-6">
-          <h2 className="text-xl font-bold mb-4">Messages</h2>
-          {currentUser ? (
-            <form onSubmit={handleSubmitMessage} className="mb-4">
-              <div className="mb-3">
-                <label className="flex items-center space-x-2 mb-2">
+  return (
+    <div className="min-h-screen bg-[#F7F9FC] pb-16 md:pt-16 flex flex-col">
+      {/* Animated Background Blobs */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <motion.div
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+          className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl"
+        />
+        <motion.div
+          animate={{
+            scale: [1, 1.3, 1],
+            opacity: [0.2, 0.4, 0.2],
+          }}
+          transition={{
+            duration: 10,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: 2,
+          }}
+          className="absolute bottom-0 left-0 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"
+        />
+      </div>
+
+      {/* Fixed Header */}
+      <div className="sticky top-16 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-4">
+          <Link 
+            to={`/forum/${forumId}/threads`}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold text-gray-900 truncate">{thread.title}</h1>
+            <p className="text-xs text-gray-500">
+              {threadMessages.length} {threadMessages.length === 1 ? 'message' : 'messages'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 max-w-4xl mx-auto w-full px-4 py-6 relative z-10">
+        {/* Messages List */}
+        <div className="space-y-6 mb-8">
+          {loading ? (
+            <LoadingSkeleton />
+          ) : threadMessages.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl">💬</span>
+              </div>
+              <p className="text-gray-500">No messages yet. Be the first to reply!</p>
+            </div>
+          ) : (
+            threadMessages.map((message) => {
+              const messageAuthor = message.author_type === 'user'
+                ? users.find((u) => u.id === message.author_id)
+                : agents.find((a) => a.id === message.author_id);
+              const messageAuthorName = messageAuthor
+                ? (message.author_type === 'user' ? (messageAuthor as any).username : (messageAuthor as any).name)
+                : 'Unknown';
+              const isAgent = message.author_type === 'agent';
+              const isCurrentUser = currentUser && message.author_type === 'user' && message.author_id === currentUser.id;
+
+              return (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 }}
+                  className={`flex items-start gap-3 ${isCurrentUser ? 'flex-row-reverse' : ''}`}
+                >
+                  {/* Avatar */}
+                  <div className="flex-shrink-0 mt-1">
+                    {messageAuthor && (messageAuthor as any).avatar_url ? (
+                      <img
+                        src={(messageAuthor as any).avatar_url}
+                        alt={messageAuthorName}
+                        className={`w-10 h-10 rounded-full object-cover border-2 ${isAgent ? 'border-purple-200' : 'border-white'} shadow-sm`}
+                      />
+                    ) : (
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white shadow-sm ${isAgent ? 'bg-purple-500' : 'bg-blue-500'}`}>
+                        {getInitials(messageAuthorName)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Message Bubble */}
+                  <div className={`flex flex-col max-w-[80%] ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                    <div className="flex items-center space-x-2 mb-1 px-1">
+                      <span className="text-sm font-medium text-gray-700">{messageAuthorName}</span>
+                      {isAgent && <span className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">BOT</span>}
+                      <span className="text-xs text-gray-400">{formatDate(message.created_at)}</span>
+                    </div>
+                    
+                    <div className={`rounded-2xl px-5 py-3 shadow-sm text-sm leading-relaxed ${
+                      isCurrentUser 
+                        ? 'bg-blue-600 text-white rounded-tr-none' 
+                        : isAgent
+                          ? 'bg-white border border-purple-100 text-gray-800 rounded-tl-none shadow-purple-100'
+                          : 'bg-white border border-gray-100 text-gray-800 rounded-tl-none'
+                    }`}>
+                      {message.content}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Reply Form */}
+        {currentUser ? (
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-100 p-4 sticky bottom-20 md:bottom-6">
+            <form onSubmit={handleSubmitMessage}>
+              <div className="flex items-center justify-between mb-3">
+                <label className="flex items-center space-x-2 cursor-pointer group">
+                  <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${useAgent ? 'bg-purple-600 border-purple-600' : 'border-gray-300'}`}>
+                    {useAgent && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                  </div>
                   <input
                     type="checkbox"
                     checked={useAgent}
@@ -290,103 +389,74 @@ export const ForumThreadPage = () => {
                       setUseAgent(e.target.checked);
                       if (!e.target.checked) setSelectedAgent('');
                     }}
-                    className="rounded"
+                    className="hidden"
                   />
-                  <span className="text-sm">Send as AI Agent</span>
+                  <span className={`text-xs font-medium ${useAgent ? 'text-purple-600' : 'text-gray-500 group-hover:text-gray-700'}`}>
+                    Reply as AI Agent
+                  </span>
                 </label>
+
                 {useAgent && (
-                  <div className="mb-2">
-                    <select
-                      value={selectedAgent}
-                      onChange={(e) => {
-                        setSelectedAgent(e.target.value);
-                        setMessageContent(''); // Clear message when changing agent
-                      }}
-                      className="w-full px-3 py-2 border rounded-lg text-sm"
-                      required={useAgent}
-                      disabled={isGeneratingAgentMessage}
-                    >
-                      <option value="">Select an agent...</option>
-                      {userAgents.map((agent) => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.name} {agent.username && `(@${agent.username})`}
-                        </option>
-                      ))}
-                    </select>
-                    {isGeneratingAgentMessage && (
-                      <p className="text-xs text-gray-500 mt-1">Generating message...</p>
-                    )}
-                  </div>
+                  <select
+                    value={selectedAgent}
+                    onChange={(e) => {
+                      setSelectedAgent(e.target.value);
+                      setMessageContent('');
+                    }}
+                    className="text-xs border-none bg-purple-50 text-purple-700 rounded-lg px-2 py-1 focus:ring-0 cursor-pointer"
+                    required={useAgent}
+                    disabled={isGeneratingAgentMessage}
+                  >
+                    <option value="">Select Agent...</option>
+                    {userAgents.map((agent) => (
+                      <option key={agent.id} value={agent.id}>{agent.name}</option>
+                    ))}
+                  </select>
                 )}
               </div>
-              <Textarea
-                value={messageContent}
-                onChange={(e) => setMessageContent(e.target.value)}
-                placeholder={
-                  useAgent && selectedAgent
-                    ? "Agent is generating a message..."
-                    : "Write a message... (Mention agents with @username or they'll auto-reply if relevant)"
-                }
-                rows={3}
-                className="mb-2"
-                disabled={isGeneratingAgentMessage}
-              />
-              <Button type="submit" size="sm" disabled={isGeneratingAgentMessage || !messageContent.trim()}>
-                {isGeneratingAgentMessage ? 'Generating...' : 'Send Message'}
-              </Button>
-            </form>
-          ) : (
-            <div className="mb-4 p-3 bg-gray-50 rounded-lg text-center">
-              <p className="text-sm text-gray-600 mb-2">Please login to participate in discussions</p>
-              <Link to="/login">
-                <Button size="sm" variant="outline">Login</Button>
-              </Link>
-            </div>
-          )}
-          <div className="space-y-4">
-            {threadMessages.map((message) => {
-              const messageAuthor = message.author_type === 'user'
-                ? users.find((u) => u.id === message.author_id)
-                : agents.find((a) => a.id === message.author_id);
-              const messageAuthorName = messageAuthor
-                ? (message.author_type === 'user' ? (messageAuthor as any).username : (messageAuthor as any).name)
-                : 'Unknown';
 
-              return (
-                <div key={message.id} className="flex items-start space-x-3 pb-4 border-b last:border-0">
-                  <div className="flex-shrink-0">
-                    {messageAuthor && (messageAuthor as any).avatar_url ? (
-                      <img
-                        src={(messageAuthor as any).avatar_url}
-                        alt={messageAuthorName}
-                        className="w-10 h-10 rounded-full"
-                      />
+              <div className="relative">
+                <Textarea
+                  value={messageContent}
+                  onChange={(e) => setMessageContent(e.target.value)}
+                  placeholder={
+                    useAgent && selectedAgent
+                      ? "Agent is thinking..."
+                      : "Write a reply..."
+                  }
+                  rows={2}
+                  className="w-full pr-12 resize-none bg-gray-50 border-transparent focus:bg-white transition-colors"
+                  disabled={isGeneratingAgentMessage}
+                />
+                <div className="absolute right-2 bottom-2">
+                  <Button 
+                    type="submit" 
+                    size="sm" 
+                    disabled={isGeneratingAgentMessage || !messageContent.trim()}
+                    className={`rounded-xl w-8 h-8 p-0 flex items-center justify-center ${useAgent ? 'bg-purple-600 hover:bg-purple-700' : ''}`}
+                  >
+                    {isGeneratingAgentMessage ? (
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-sm">
-                        {getInitials(messageAuthorName)}
-                      </div>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
                     )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-semibold text-sm">{messageAuthorName}</span>
-                      {message.author_type === 'agent' && <span className="text-xs">🤖</span>}
-                      <span className="text-xs text-gray-500">·</span>
-                      <span className="text-xs text-gray-500">{formatDate(message.created_at)}</span>
-                    </div>
-                    <p className="text-gray-700">{message.content}</p>
-                  </div>
+                  </Button>
                 </div>
-              );
-            })}
-            {threadMessages.length === 0 && (
-              <p className="text-gray-500 text-center py-4">No messages yet. Be the first to reply!</p>
-            )}
+              </div>
+            </form>
           </div>
-        </Card>
+        ) : (
+          <div className="text-center p-4 bg-gray-50 rounded-xl border border-gray-100">
+            <p className="text-sm text-gray-600 mb-2">Log in to join the conversation</p>
+            <Link to="/login">
+              <Button size="sm" variant="outline">Login</Button>
+            </Link>
+          </div>
+        )}
       </div>
       <BottomNav />
     </div>
   );
 };
-
