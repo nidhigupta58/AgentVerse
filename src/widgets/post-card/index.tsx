@@ -389,7 +389,7 @@ export const PostCard: React.FC<PostCardProps> = ({ post, showDelete = false, on
                       fill={isLiked ? "currentColor" : "none"}
                       stroke="currentColor"
                       strokeWidth={isLiked ? "0" : "2"}
-                      className={`w-6 h-6 md:w-7 md:h-7 ${isLiked ? 'text-red-500' : 'text-gray-500 group-hover:text-red-500'}`}
+                      className={`w-6 h-6 md:w-7 md:h-7 ${isLiked ? 'text-red-500' : 'text-[#64748b] group-hover:text-red-500'}`}
                     >
                       <path
                         strokeLinecap="round"
@@ -430,8 +430,8 @@ export const PostCard: React.FC<PostCardProps> = ({ post, showDelete = false, on
                     )}
                   </AnimatePresence>
                 </div>
-                <span className={`text-[13px] md:text-[14px] font-medium transition-colors ${isLiked ? 'text-red-500' : 'text-gray-500 group-hover:text-red-500'}`}>
-                  {postLikes.length > 0 ? postLikes.length : 'Like'}
+                <span className={`text-[13px] md:text-[14px] font-medium transition-colors ${isLiked ? 'text-red-500' : 'text-[#64748b] group-hover:text-red-500'}`}>
+                  {postLikes.length}
                 </span>
               </motion.button>
               <button
@@ -556,9 +556,22 @@ export const PostCard: React.FC<PostCardProps> = ({ post, showDelete = false, on
                           <div className="flex items-center space-x-3 md:space-x-4 mb-1.5 md:mb-2">
                             <button
                               onClick={(e) => handleLikeComment(comment.id, e)}
-                              className={`flex items-center space-x-1 text-[12px] md:text-[13px] ${isCommentLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
+                              className={`flex items-center space-x-1 text-[12px] md:text-[13px] ${isCommentLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors group`}
                             >
-                              <span>❤️</span>
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill={isCommentLiked ? "currentColor" : "none"}
+                                stroke="currentColor"
+                                strokeWidth={isCommentLiked ? "0" : "2"}
+                                className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isCommentLiked ? 'text-red-500' : 'text-gray-500 group-hover:text-red-500'}`}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
+                                />
+                              </svg>
                               <span className="font-medium">{thisCommentLikes.length}</span>
                             </button>
                             {currentUser && (
@@ -670,9 +683,22 @@ export const PostCard: React.FC<PostCardProps> = ({ post, showDelete = false, on
                                       </div>
                                       <button
                                         onClick={(e) => handleLikeComment(reply.id, e)}
-                                        className={`flex items-center space-x-1 text-[12px] ${isReplyLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
+                                        className={`flex items-center space-x-1 text-[12px] ${isReplyLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors group`}
                                       >
-                                        <span>❤️</span>
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          viewBox="0 0 24 24"
+                                          fill={isReplyLiked ? "currentColor" : "none"}
+                                          stroke="currentColor"
+                                          strokeWidth={isReplyLiked ? "0" : "2"}
+                                          className={`w-3.5 h-3.5 ${isReplyLiked ? 'text-red-500' : 'text-gray-500 group-hover:text-red-500'}`}
+                                        >
+                                          <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"
+                                          />
+                                        </svg>
                                         <span className="font-medium">{replyLikes.length}</span>
                                       </button>
                                     </div>
