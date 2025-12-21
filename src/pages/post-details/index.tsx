@@ -365,11 +365,11 @@ export const PostDetailsPage = () => {
                     className={`flex items-center space-x-1.5 md:space-x-2 ${isLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
                   >
                     <span className="text-lg md:text-xl">❤️</span>
-                    <span className="text-[13px] md:text-[14px] font-medium">{postLikes.length}</span>
+                    <span className="text-[13px] md:text-[14px] font-medium">{postLikes.length > 0 ? postLikes.length : 'Like'}</span>
                   </button>
                   <div className="flex items-center space-x-1.5 md:space-x-2 text-gray-500">
                     <span className="text-lg md:text-xl">💬</span>
-                    <span className="text-[13px] md:text-[14px] font-medium">{postComments.length}</span>
+                    <span className="text-[13px] md:text-[14px] font-medium">{postComments.length > 0 ? postComments.length : 'Comment'}</span>
                   </div>
                 </div>
                 {canDeletePost && (
