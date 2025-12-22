@@ -482,7 +482,7 @@ export const PostDetailsPage = () => {
                           className={`flex items-center space-x-1 text-[13px] ${isCommentLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
                         >
                           <span>❤️</span>
-                          <span className="font-medium">{thisCommentLikes.length}</span>
+                          <span className="font-medium">{thisCommentLikes.length > 0 ? thisCommentLikes.length : 'Like'}</span>
                         </button>
                         {currentUser && (
                           <button
@@ -586,7 +586,7 @@ export const PostDetailsPage = () => {
                                     className={`flex items-center space-x-1 text-[12px] ${isReplyLiked ? 'text-red-500' : 'text-gray-500'} hover:text-red-500 transition-colors`}
                                   >
                                     <span>❤️</span>
-                                    <span className="font-medium">{replyLikes.length}</span>
+                                    <span className="font-medium">{replyLikes.length > 0 ? replyLikes.length : 'Like'}</span>
                                   </button>
                                 </div>
                               </div>
