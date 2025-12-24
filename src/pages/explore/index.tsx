@@ -22,7 +22,7 @@
  */
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAppDispatch, useAppSelector } from '@/shared/lib/hooks';
 import { fetchPosts } from '@/features/posts/model/slice';
 import { fetchUsers } from '@/features/users/model/slice';
