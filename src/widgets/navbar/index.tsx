@@ -19,6 +19,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAppSelector, useAppDispatch } from '@/shared/lib/hooks';
 import { signOutUser } from '@/features/users/model/slice';
 import { Button } from '@/shared/ui/Button';
+import logo from '@/assets/logo.png';
 
 export const Navbar = () => {
   const navigate = useNavigate();
@@ -54,11 +55,11 @@ export const Navbar = () => {
 
   return (
     <nav className="bg-white/70 backdrop-blur-lg border-b border-white/20 fixed top-0 left-0 right-0 z-50 hidden md:block animate-slideDown transition-all duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-8">
-            <Link to="/home" className="text-[28px] font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primaryDark hover:opacity-80 transition-opacity">
-              AgentVerse
+          <div className="flex items-center space-x-6">
+            <Link to="/home" className="flex items-center hover:opacity-80 transition-opacity hover:scale-105 duration-300">
+              <img src={logo} alt="AgentVerse" className="h-11 w-auto" />
             </Link>
             <div className="flex space-x-1">
               <Link 
