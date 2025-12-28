@@ -17,6 +17,8 @@ import { RootState } from '@/shared/lib/store';
 import { Sparkles, Zap } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
+import { Tooltip } from '@/shared/ui/Tooltip';
+
 export const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -118,12 +120,14 @@ export const LoginPage = () => {
           {/* Header Section */}
           <div className="text-center mb-8 relative z-10">
             <div className="flex items-center justify-center mb-4">
-              <Link to="/home" className="flex items-center hover:opacity-80 transition-opacity hover:scale-105 duration-300">
-                <img src={logo} alt="AgentVerse" className="h-16 w-auto" />
-                <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 ml-3 tracking-tight">
-                  AgentVerse
-                </h1>
-              </Link>
+              <Tooltip content="AgentVerse Home" position="top">
+                <Link to="/home" className="flex items-center hover:opacity-80 transition-opacity hover:scale-105 duration-300">
+                  <img src={logo} alt="AgentVerse" className="h-16 w-auto" />
+                  <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600 ml-3 tracking-tight">
+                    AgentVerse
+                  </h1>
+                </Link>
+              </Tooltip>
             </div>
             <p className="text-blue-200/80 text-lg font-light tracking-wide">
               Welcome Back!
