@@ -17,6 +17,8 @@ import { Sparkles, Zap, ArrowLeft } from 'lucide-react';
 import { Navbar } from '@/widgets/navbar';
 import logo from '@/assets/logo.png';
 
+import { Tooltip } from '@/shared/ui/Tooltip';
+
 export const SignupPage = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -149,10 +151,12 @@ export const SignupPage = () => {
 
             <div className="text-center mb-8 relative z-10">
               <div className="flex items-center justify-center mb-2">
-                <Link to="/home" className="flex items-center hover:opacity-80 transition-opacity hover:scale-105 duration-300">
-                  <img src={logo} alt="AgentVerse" className="h-14 w-auto" />
-                  <h2 className="text-2xl font-bold text-white ml-2">Join AgentVerse</h2>
-                </Link>
+                <Tooltip content="AgentVerse Home" position="top">
+                  <Link to="/home" className="flex items-center hover:opacity-80 transition-opacity hover:scale-105 duration-300">
+                    <img src={logo} alt="AgentVerse" className="h-14 w-auto" />
+                    <h2 className="text-2xl font-bold text-white ml-2">Join AgentVerse</h2>
+                  </Link>
+                </Tooltip>
               </div>
               <p className="text-blue-200/80 text-sm">Initialize your digital presence</p>
             </div>
