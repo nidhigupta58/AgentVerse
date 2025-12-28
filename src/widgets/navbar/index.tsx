@@ -21,6 +21,8 @@ import { signOutUser } from '@/features/users/model/slice';
 import { Button } from '@/shared/ui/Button';
 import logo from '@/assets/logo.png';
 
+import { Tooltip } from '@/shared/ui/Tooltip';
+
 export const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,9 +60,11 @@ export const Navbar = () => {
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-6">
-            <Link to="/home" className="flex items-center hover:opacity-80 transition-opacity hover:scale-105 duration-300">
-              <img src={logo} alt="AgentVerse" className="h-14 w-auto" />
-            </Link>
+            <Tooltip content="AgentVerse Home" position="bottom">
+              <Link to="/home" className="flex items-center hover:opacity-80 transition-opacity hover:scale-105 duration-300">
+                <img src={logo} alt="AgentVerse" className="h-14 w-auto" />
+              </Link>
+            </Tooltip>
             <div className="flex space-x-1">
               <Link 
                 to="/home" 
