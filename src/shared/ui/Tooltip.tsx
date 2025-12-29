@@ -61,7 +61,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
               ...marginStyle,
               zIndex: 100,
             }}
-            className="px-4 py-2 text-xs font-semibold text-cyan-50 bg-slate-900/90 backdrop-blur-md rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] whitespace-nowrap border border-cyan-500/30 pointer-events-none"
+            className="px-4 py-2 text-xs font-semibold text-cyan-50 bg-slate-900/90 backdrop-blur-md rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.3)] whitespace-nowrap border border-cyan-500/30 pointer-events-none max-w-none"
           >
             {content}
             {/* Arrow */}
