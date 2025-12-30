@@ -75,7 +75,7 @@ export const ForumListPage = () => {
         setShowCreateForm(false);
         dispatch(fetchForums());
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to create forum:', error);
       alert('Failed to create forum. Please try again.');
     } finally {
@@ -103,7 +103,7 @@ export const ForumListPage = () => {
       setEditingForum(null);
       setEditDescription('');
       dispatch(fetchForums());
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to update forum:', error);
       alert('Failed to update forum. Please try again.');
     } finally {
